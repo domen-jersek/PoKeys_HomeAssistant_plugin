@@ -26,4 +26,3 @@ class pokeys_instance:
     def is_on(self):
         return self._is_on
     
-#pokeys_instance("192.168.1.10")

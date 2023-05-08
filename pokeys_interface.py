@@ -160,6 +160,5 @@ if __name__ == "__main__":
     else:
         print("Device name " + pk.get_name())
         print(pk.inputs)
-        #pk.send_request(pk.prepare_command(0x40, 12, 0 if False else 1, 0, 0, []))
         print("done")
 

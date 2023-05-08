@@ -26,8 +26,6 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
 
-#from .const import DOMAIN
-
 from .pokeys_interface import pokeys_interface
 
 _LOGGER = logging.getLogger("pokeys")
@@ -35,7 +33,6 @@ _LOGGER = logging.getLogger("pokeys")
 pk = pokeys_interface()
 
 DOMAIN = "PoKeys57E"
-#pin = data.get("pin")
 pin = 12
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
@@ -57,22 +54,12 @@ def setup_platform(hass: HomeAssistant, config: ConfigType, add_entities: AddEnt
             config.get(CONF_HOST),
         )
     ])
-    #add_entities([PoKeys57E(switch)])
-    """switch = {
-        "name": config.get(CONF_NAME),
-        "host": config.get(CONF_HOST)
-    }
-
-    add_entities([
-        PoKeys57E(hass, switch["name"], switch["host"], config)
-    ])"""
     _LOGGER.info(pformat(config))
     
 
-class PoKeys57E(SwitchEntity): #SwitchDevice
+class PoKeys57E(SwitchEntity):
 
     def __init__(self, hass, name, host):
-        
         #_LOGGER.info(pformat(config))
         self._switch = pokeys_instance(host)
 
@@ -88,11 +75,6 @@ class PoKeys57E(SwitchEntity): #SwitchDevice
 
     @property
     def is_on(self):
-        #pk.set_pin_function(11, 4)
-        """if not _send: #pk.connect(switch(["host"]))
-            _LOGGER.error("Not available")
-        else:
-            _LOGGER.error("avalible")"""
         return self._state
 
     def turn_on(self, **kwargs):
@@ -101,7 +83,6 @@ class PoKeys57E(SwitchEntity): #SwitchDevice
         # Implement switch on logic here
         self._state = True
         self.schedule_update_ha_state()
-        #pk.set_output(12, True)
 
 
     def turn_off(self, **kwargs):
@@ -110,4 +91,3 @@ class PoKeys57E(SwitchEntity): #SwitchDevice
         pk.set_pin_function(pin-1, 2)
         self._state = False
         self.schedule_update_ha_state()
-        #pk.set_output(12, False)
