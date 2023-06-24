@@ -28,6 +28,9 @@ from homeassistant.components.binary_sensor import DOMAIN
 from homeassistant.loader import bind_hass
 from homeassistant.util import dt as dt_util
 import homeassistant.helpers.config_validation as cv
+from homeassistant.const import CONF_NAME
+from homeassistant.const import CONF_HOST
+#cv = config_validation()
 
 from .pokeys_interface import pokeys_interface
 pk = pokeys_interface()
@@ -167,7 +170,9 @@ DEVICE_CLASS_UPDATE = BinarySensorDeviceClass.UPDATE.value
 DEVICE_CLASS_VIBRATION = BinarySensorDeviceClass.VIBRATION.value
 DEVICE_CLASS_WINDOW = BinarySensorDeviceClass.WINDOW.value
 
+# mypy: disallow-any-generics
 
+#async_setup
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Track states and offer events for binary sensors."""
     component = hass.data[DOMAIN] = EntityComponent[BinarySensorEntity](
@@ -187,6 +192,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_enti
     ])
     _LOGGER.info(pformat(config))
     await component.async_setup(config)
+    #async_add_entities([binary_sensor])
     return True
 
 class PoKeys57E(BinarySensorEntity):
@@ -206,15 +212,23 @@ class PoKeys57E(BinarySensorEntity):
     @property
     def is_on(self):
         return self._state
-
-    def update(self):
+    
+    #host = PoKeys57E(config.get(CONF_HOST))
+    async def async_update(self):
         # Code to read the state of your IO device
-        pk.connect("192.168.1.10")
+        # and set self._state accordingly
+        #self._state = read_io_device_state()
+        
+        #pk.connect(_host) #"192.168.0.103"
+        #_state = pk.read_digital_input(7)
+        #self.pk.read_pin_function(pin)
         self._state = pk.read_digital_input(pin-1)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Set up a config entry."""
+
+    #async_add_entities(PoKeys57E(hass, CONF_NAME, CONF_HOST))
     
     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
     return await component.async_setup_entry(entry)
@@ -222,6 +236,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: Con
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+
+    #async_add_entities(PoKeys57E(hass, CONF_NAME, CONF_HOST))
 
     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
     return await component.async_unload_entry(entry)
@@ -255,6 +271,10 @@ class BinarySensorEntity(Entity):
     def name(self):
         return self._name
 
+    #@property
+    #def is_on(self):
+    #    return self._state
+
     @property
     def device_class(self) -> BinarySensorDeviceClass | None:
         """Return the class of this entity."""
@@ -268,7 +288,7 @@ class BinarySensorEntity(Entity):
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
         
-        pk.connect("192.168.1.10")
+        #pk.connect("192.168.0.103")
         if pk.read_digital_input(pin-1) == "on":
             return self._attr_is_on
         return self._state
