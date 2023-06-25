@@ -2,6 +2,7 @@ switch:
   - platform: pokeys
     name: "PoKeys57E"
     host: "192.168.1.10"
+    pin: "12"
   #- platform: pokeys  (syntax for multiple switch entities)
   #  name: "PoKeys57E_2"
   #  host: "192.168.1.105"
