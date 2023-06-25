@@ -12,7 +12,7 @@ from pprint import pformat
 from homeassistant.backports.enum import StrEnum
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.switch import (PLATFORM_SCHEMA, PLATFORM_SCHEMA_BASE, SwitchEntity)  #, SwitchDevice
-from homeassistant.const import (CONF_NAME, CONF_HOST)
+from homeassistant.const import (CONF_NAME, CONF_HOST, CONF_PIN) #, CONF_PIN
 from homeassistant.const import (
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
@@ -33,39 +33,48 @@ _LOGGER = logging.getLogger("pokeys")
 pk = pokeys_interface()
 
 DOMAIN = "PoKeys57E"
-pin = 12
+#pin = 12
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
     vol.Required(CONF_HOST): cv.string,
+    vol.Required(CONF_PIN): cv.string,
 })
+#vol.Required(CONF_PIN): cv.string,
+#CONF_PIN = "pin"
+#pin = config.get(CONF_PIN)
 
 def setup_platform(hass: HomeAssistant, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None):
+    #pin = config.get(CONF_PIN)
 
     switch = {
         "name": config[CONF_NAME],
-        "host": config[CONF_HOST]
-    }
+        "host": config[CONF_HOST],
+        "pin": config[CONF_PIN]        
+    }#"pin": config[CONF_PIN]
     
     add_entities([
         PoKeys57E(
             hass,
             config.get(CONF_NAME),
             config.get(CONF_HOST),
+            config.get(CONF_PIN)
         )
     ])
+    #config.get(CONF_PIN),
     _LOGGER.info(pformat(config))
     
 
 class PoKeys57E(SwitchEntity):
 
-    def __init__(self, hass, name, host):
+    def __init__(self, hass, name, host, pin): #, pin
         #_LOGGER.info(pformat(config))
         self._switch = pokeys_instance(host)
 
         self._hass = hass
         self._name = name  #config[CONF_NAME]
         self._host = host  #config[CONF_HOST]
+        self._pin = pin
         self._state = None
         pk.connect(host)
 
@@ -76,10 +85,13 @@ class PoKeys57E(SwitchEntity):
     @property
     def is_on(self):
         return self._state
-
-    def turn_on(self, **kwargs):
-        
-        pk.set_pin_function(pin-1, 4)
+    
+    def turn_on(self, **kwargs): 
+        #config_entry = self.hass.config_entries.async_get_entry(self.config_entry_id)
+        #config = self.hass.config_entries
+        #pin = self.hass.config_entries(CONF_PIN)
+        pin = self._pin
+        pk.set_pin_function(int(pin)-1, 4)
         # Implement switch on logic here
         self._state = True
         self.schedule_update_ha_state()
@@ -88,6 +100,9 @@ class PoKeys57E(SwitchEntity):
     def turn_off(self, **kwargs):
         """Turn the switch off."""
         # Implement switch off logic here
-        pk.set_pin_function(pin-1, 2)
+        #config = self.hass.config_entries
+        #pin = self.hass.config_entries(CONF_PIN)
+        pin = self._pin
+        pk.set_pin_function(int(pin)-1, 2)
         self._state = False
         self.schedule_update_ha_state()
