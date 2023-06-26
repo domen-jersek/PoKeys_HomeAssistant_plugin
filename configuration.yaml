@@ -11,8 +11,10 @@ button:
   - platform: pokeys
     name: "PoKeys57E"
     host: "192.168.1.10"
+    pin: "13"
 
 binary_sensor:
   - platform: pokeys
     name: "PoKeys57E"
     host: "192.168.1.10"
+    pin: "8"

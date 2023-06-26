@@ -30,11 +30,12 @@ from homeassistant.util import dt as dt_util
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_NAME
 from homeassistant.const import CONF_HOST
+from homeassistant.const import CONF_PIN
 #cv = config_validation()
 
 from .pokeys_interface import pokeys_interface
 pk = pokeys_interface()
-pin = 8
+#pin = 8
 
 _LOGGER = logging.getLogger("pokeys")
 
@@ -46,6 +47,7 @@ ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
     vol.Required(CONF_HOST): cv.string,
+    vol.Required(CONF_PIN): cv.string,
 })
 
 class BinarySensorDeviceClass(StrEnum):
@@ -181,13 +183,15 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_enti
     
     binary_sensor = {
         "name": config[CONF_NAME],
-        "host": config[CONF_HOST]
+        "host": config[CONF_HOST],
+        "pin": config[CONF_PIN]
     }
     add_entities([
         PoKeys57E(
             hass,
             config.get(CONF_NAME),
             config.get(CONF_HOST),
+            config.get(CONF_PIN),
         )
     ])
     _LOGGER.info(pformat(config))
@@ -196,12 +200,13 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_enti
     return True
 
 class PoKeys57E(BinarySensorEntity):
-    def __init__(self, hass, name, host):
+    def __init__(self, hass, name, host, pin):
         self._binary_sensor = pokeys_instance(host)
         self._hass = hass
         
         self._name = name
         self._host = host
+        self._pin = pin
         self._state = False
         pk.connect(host)
 
@@ -222,7 +227,8 @@ class PoKeys57E(BinarySensorEntity):
         #pk.connect(_host) #"192.168.0.103"
         #_state = pk.read_digital_input(7)
         #self.pk.read_pin_function(pin)
-        self._state = pk.read_digital_input(pin-1)
+        pin = self._pin
+        self._state = pk.read_digital_input(int(pin)-1)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
@@ -258,12 +264,13 @@ class BinarySensorEntity(Entity):
     _attr_is_on: bool | None = None
     _attr_state: None = None
 
-    def __init__(self, hass, name, host):
+    def __init__(self, hass, name, host, pin):
         self._binary_sensor = pokeys_instance(host)
         self._hass = hass
         
         self._name = name
         self._host = host
+        self._pin = pin
         self._state = False
         pk.connect(host)
 
@@ -289,7 +296,8 @@ class BinarySensorEntity(Entity):
         """Return true if the binary sensor is on."""
         
         #pk.connect("192.168.0.103")
-        if pk.read_digital_input(pin-1) == "on":
+        pin = self._pin
+        if pk.read_digital_input(int(pin)-1) == "on":
             return self._attr_is_on
         return self._state
 
