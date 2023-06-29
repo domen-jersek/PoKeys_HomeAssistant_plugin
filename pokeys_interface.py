@@ -155,10 +155,6 @@ class pokeys_interface():
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
         resp = self.send_request(self.prepare_command(0x30, 0, 0, 0, 0, []))
         return resp
-
-    def serial_to_ip(self):
-        resp = self.send_request(self.prepare_command(0xCD, 0 ,0 ,0 ,0, []))
-        return resp
     
     def device_discovery(self, serial_num_input):
         broadcast_address = '<broadcast>'
