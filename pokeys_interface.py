@@ -3,7 +3,8 @@ import socket
 import ipaddress
 import struct
 import random
-#from netifaces import interfaces, ifaddresses, AF_INET
+import netifaces
+import binascii
 
 class pokeys_interface():
     def __init__(self):
@@ -11,7 +12,7 @@ class pokeys_interface():
         self.connected = False
         
         self.POKEYS_PORT_COM = 20055
-        self.address = "192.168.0.104"       
+        self.address = "192.168.1.177"       
 
         self.users = []
         self.blinds = dict()
@@ -148,17 +149,87 @@ class pokeys_interface():
 
     def read_digital_input(self, pin):
         resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, []))
-        return self.get_input(pin)   
+        return self.get_input(pin)
 
+    def read_sensor_values(self):
+        #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x30, 0, 0, 0, 0, []))
+        return resp
+
+    def serial_to_ip(self):
+        resp = self.send_request(self.prepare_command(0xCD, 0 ,0 ,0 ,0, []))
+        return resp
+    
+    def device_discovery(self, serial_num_input):
+        broadcast_address = '<broadcast>'
+        port = 20055
+
+        message = b'Discovery request'
+
+        interfaces = netifaces.interfaces()
+        for interface in interfaces:
+            try:
+                # Get the addresses for the interface
+                addresses = netifaces.ifaddresses(interface)
+                # Check if the interface has an IPv4 address
+                if netifaces.AF_INET in addresses:
+                    ipv4_addresses = addresses[netifaces.AF_INET]
+
+                    for address_info in ipv4_addresses:
+                        ip_address = address_info['addr']
+                        ip_int = socket.inet_aton(ip_address).hex()
+                        # Create a UDP socket
+                        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        print(ip_address)
+
+                        try:
+                            udp_socket.bind((ip_address, 0))
+                        except: socket.error
+                        
+                        # Set the socket to allow broadcasting
+                        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                        # Send the message to the broadcast address
+                        udp_socket.sendto(message, (broadcast_address, port))
+
+                        udp_socket.settimeout(2)
+                        # Listen for responses
+                        while True:
+                            try:
+                                data, address = udp_socket.recvfrom(1024)
+                                #print(binascii.hexlify(data).decode())
+                                serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
+                                serial_num_dec = int(serial_num_hex, 16)
+                                print(serial_num_dec)
+                                print(address[0])
+                                print(f"Received response from {address}: {data}")
+                            except socket.timeout:
+                                print("No more responses")
+                                break
+                        
+                        udp_socket.close()
+                        
+                        if serial_num_dec == serial_num_input:
+                            print(address[0])
+                            return address[0]
+                        else:
+                            print("No device found")
+
+            except ValueError:
+                pass 
+            
 
 if __name__ == "__main__":
     # Test the interface
     print("PoKeys interface test...")
     pk = pokeys_interface()
-    if not pk.connect("192.168.0.104"):
+    host = pk.device_discovery(31557)
+    if not pk.connect(host):
         print("Not available")
     else:
         print("Device name " + pk.get_name())
         print(pk.inputs)
+        
+        #print(pk.read_sensor_values())
+        #print(pk.serial_to_ip())
         print("done")
 
