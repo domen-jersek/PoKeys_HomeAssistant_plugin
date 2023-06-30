@@ -29,7 +29,6 @@ from homeassistant.loader import bind_hass
 from homeassistant.util import dt as dt_util
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_NAME
-from homeassistant.const import CONF_HOST
 from homeassistant.const import CONF_PIN
 #cv = config_validation()
 
@@ -40,13 +39,14 @@ pk = pokeys_interface()
 _LOGGER = logging.getLogger("pokeys")
 
 DOMAIN = "PoKeys57E"
-SCAN_INTERVAL = timedelta(seconds=30)
+SCAN_INTERVAL = timedelta(seconds=15)
+CONF_SERIAL = "serial"
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
-    vol.Required(CONF_HOST): cv.string,
+    vol.Required(CONF_SERIAL): cv.string,
     vol.Required(CONF_PIN): cv.string,
 })
 
@@ -183,14 +183,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_enti
     
     binary_sensor = {
         "name": config[CONF_NAME],
-        "host": config[CONF_HOST],
+        "serial": config[CONF_SERIAL],
         "pin": config[CONF_PIN]
     }
     add_entities([
         PoKeys57E(
             hass,
             config.get(CONF_NAME),
-            config.get(CONF_HOST),
+            config.get(CONF_SERIAL),
             config.get(CONF_PIN),
         )
     ])
@@ -200,12 +200,13 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_enti
     return True
 
 class PoKeys57E(BinarySensorEntity):
-    def __init__(self, hass, name, host, pin):
+    def __init__(self, hass, name, serial, pin):
+        self._serial = serial
+        host = pk.device_discovery(serial)
         self._binary_sensor = pokeys_instance(host)
         self._hass = hass
         
         self._name = name
-        self._host = host
         self._pin = pin
         self._state = False
         pk.connect(host)
@@ -264,12 +265,13 @@ class BinarySensorEntity(Entity):
     _attr_is_on: bool | None = None
     _attr_state: None = None
 
-    def __init__(self, hass, name, host, pin):
+    def __init__(self, hass, name, serial, pin):
+        self._serial = serial
+        host = pk.device_discovery(serial)
         self._binary_sensor = pokeys_instance(host)
         self._hass = hass
         
         self._name = name
-        self._host = host
         self._pin = pin
         self._state = False
         pk.connect(host)
