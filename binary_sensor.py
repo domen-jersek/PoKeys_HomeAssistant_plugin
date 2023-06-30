@@ -39,7 +39,7 @@ pk = pokeys_interface()
 _LOGGER = logging.getLogger("pokeys")
 
 DOMAIN = "PoKeys57E"
-SCAN_INTERVAL = timedelta(seconds=15)
+SCAN_INTERVAL = timedelta(seconds=8)
 CONF_SERIAL = "serial"
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
