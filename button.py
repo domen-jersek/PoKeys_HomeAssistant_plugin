@@ -16,7 +16,7 @@ from homeassistant.config_entries import ConfigEntry
 #from homeassistant.const import CONF_NAME, CONF_HOST
 #from homeassistant.components.button import ButtonEntity, PLATFORM_SCHEMA
 from homeassistant.components.button import (PLATFORM_SCHEMA, PLATFORM_SCHEMA_BASE, ButtonEntity) #, ButtonEntity
-from homeassistant.const import (CONF_NAME, CONF_HOST, CONF_PIN)
+from homeassistant.const import (CONF_NAME, CONF_PIN) #, CONF_SERIAL
 #from homeassistant.const import (
 #    SERVICE_TURN_OFF,
 #    SERVICE_TURN_ON,
@@ -39,11 +39,12 @@ _LOGGER = logging.getLogger("pokeys")
 pk = pokeys_interface()
 DOMAIN = "PoKeys57E"
 #pin = 13
+CONF_SERIAL = "serial"
 
 # Define a platform schema that includes the required configuration options
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
-    vol.Required(CONF_HOST): cv.string,
+    vol.Required(CONF_SERIAL): cv.string,
     vol.Required(CONF_PIN): cv.string,
 })
 
@@ -53,14 +54,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_enti
     #host = config.get(CONF_HOST)
     button = {
         "name": config[CONF_NAME],
-        "host": config[CONF_HOST],
+        "serial": config[CONF_SERIAL],
         "pin": config[CONF_PIN]
     }
     add_entities([
         PoKeys57E(
             hass,
             config.get(CONF_NAME),
-            config.get(CONF_HOST),
+            config.get(CONF_SERIAL),
             config.get(CONF_PIN)
         )
     ])
@@ -75,13 +76,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_enti
 class PoKeys57E(ButtonEntity):
     """Define the custom button entity."""
     
-    def __init__(self, hass, name, host, pin):
+    def __init__(self, hass, name, serial, pin):
         """Initialize the button entity."""
+        self._serial = serial
+        host = pk.device_discovery(serial)
         self._button = pokeys_instance(host)
 
         self._hass = hass
         self._name = name
-        self._host = host
         self._pin = pin
         self._state = "released"
         pk.connect(host)
