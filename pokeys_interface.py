@@ -198,18 +198,19 @@ class pokeys_interface():
                                 print(serial_num_dec)
                                 print(address[0])
                                 print(f"Received response from {address}: {data}")
+                                if str(serial_num_dec) == serial_num_input:
+                                    print(address[0])
+                                    return address[0]
+                                    
+                                else:
+                                    print("No device found")
+
                             except socket.timeout:
                                 print("No more responses")
                                 break
                         
                         udp_socket.close()
                         
-                        if serial_num_dec == serial_num_input:
-                            print(address[0])
-                            return address[0]
-                        else:
-                            print("No device found")
-
             except ValueError:
                 pass 
             
@@ -218,7 +219,7 @@ if __name__ == "__main__":
     # Test the interface
     print("PoKeys interface test...")
     pk = pokeys_interface()
-    host = pk.device_discovery(31557)
+    host = pk.device_discovery("31557")
     if not pk.connect(host):
         print("Not available")
     else:
