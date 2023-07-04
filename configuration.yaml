@@ -18,3 +18,8 @@ binary_sensor:
     name: "PoKeys57E"
     serial: "31557"
     pin: "8"
+
+sensor:
+  - platform: pokeys
+    name: "PoKeys57E"
+    serial: "31557"
