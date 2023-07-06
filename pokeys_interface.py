@@ -5,6 +5,7 @@ import struct
 import random
 import netifaces
 import binascii
+import re
 
 class pokeys_interface():
     def __init__(self):
@@ -148,13 +149,69 @@ class pokeys_interface():
         return binary_state
 
     def read_digital_input(self, pin):
-        resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, [0x40]))
         return self.get_input(pin)
 
-    def read_sensor_values(self):
+    def sensor_setup(self, i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
-        resp = self.send_request(self.prepare_command(0x30, 0, 0, 0, 0, []))
+    
+        resp = self.send_request(self.prepare_command(0x76, i, i, 0, 0, []))
         return resp
+
+    def read_sensor_values(self, i):
+    
+        resp = self.send_request(self.prepare_command(0x77, i, i, 0, 0, [])) #, 0, 1, 0, []
+        return resp
+    
+    def sensor_readout(self):
+        for i in range(1,14):
+            #print("config " + str(i), re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())) 
+            #print("sensor type ", (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8])
+            #print("reading ID ", (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9])
+            config = re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())
+            valPacket = re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode())
+            sensorType = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8]
+            readingID = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9]
+            val_hex = str(valPacket[9])+str(valPacket[8])
+            val = int(val_hex, base=16)/100
+            if sensorType == '23':
+                if readingID == '00':
+                    #temp = int(val, base=16)/100
+                    print("Temperature: ", val)
+                else:
+                    print("Humidity: ", val)
+            elif sensorType == '41':
+                if readingID == '00':
+                    print("Light indoor: ", val)
+                elif readingID == '01':
+                    print("Light outdoor: ", val)
+                elif readingID == '02':
+                    print("IR Light indoor: ", val)
+                elif readingID == '03':
+                    print("IR Light outdoor: ", val)
+                elif readingID == '0a':
+                    print("Light reflection: ", val)
+            elif sensorType == '61':
+                if readingID == '00':
+                    print("Acceliration X", val)
+                elif readingID == '01':
+                    print("Acceliration Y", val)
+                elif readingID == '02':
+                    print("Acceliration Z", val)
+            elif sensorType == '50':
+                if readingID == '00':
+                    print("A/D input(1x gain) in µV", val)
+                elif readingID == '01':
+                    print("A/D input(2x gain) in µV", val)
+                elif readingID == '02':
+                    print("A/D input(4x gain) in µV", val)
+                elif readingID == '03':
+                    print("A/D input(8x gain) in µV", val)            
+
+            #print("values " + str(i), re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode()))
+            #print("sensor value ", (re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode()))[9])
+            #print("hex value packet ", binascii.hexlify(pk.read_sensor_values(i)).decode())
+            #print("dec value ", int(str(binascii.hexlify(pk.read_sensor_values(i)).decode()), base=16), "\n")
     
     def device_discovery(self, serial_num_input):
         broadcast_address = '<broadcast>'
@@ -225,8 +282,6 @@ if __name__ == "__main__":
     else:
         print("Device name " + pk.get_name())
         print(pk.inputs)
-        
-        #print(pk.read_sensor_values())
-        #print(pk.serial_to_ip())
+        print(pk.sensor_readout())
         print("done")
 
