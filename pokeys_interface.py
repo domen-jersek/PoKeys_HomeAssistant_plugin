@@ -152,19 +152,23 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, [0x40]))
         return self.get_input(pin)
 
-    def sensor_setup(self, i):
+    def sensor_setup(self,i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
     
-        resp = self.send_request(self.prepare_command(0x76, i, i, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, []))
         return resp
 
-    def read_sensor_values(self, i):
+    def read_sensor_values(self,i):
     
-        resp = self.send_request(self.prepare_command(0x77, i, i, 0, 0, [])) #, 0, 1, 0, []
+        resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [])) #, 0, 1, 0, []
         return resp
     
     
-    def sensor_readout(self):
+    def sensor_readout(self, serial, type):
+        pk = pokeys_interface()
+        host = pk.device_discovery(serial)
+        pk.connect(host)
+        
         for i in range(1,14):
             #print("config " + str(i), re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())) 
             #print("sensor type ", (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8])
@@ -175,40 +179,61 @@ class pokeys_interface():
             readingID = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9]
             val_hex = str(valPacket[9])+str(valPacket[8])
             val = int(val_hex, base=16)/100
-            if sensorType == '23':
-                if readingID == '00':
-                    #temp = int(val, base=16)/100
-                    print("Temperature: ", val)
-                else:
-                    print("Humidity: ", val)
-            elif sensorType == '41':
-                if readingID == '00':
-                    print("Light indoor: ", val)
-                elif readingID == '01':
-                    print("Light outdoor: ", val)
-                elif readingID == '02':
-                    print("IR Light indoor: ", val)
-                elif readingID == '03':
-                    print("IR Light outdoor: ", val)
-                elif readingID == '0a':
-                    print("Light reflection: ", val)
+            if type == "Temperature":
+                if sensorType == '23':
+                    if readingID == '00':
+                        #print("Temperature: ", val)
+                        return val
+            elif type == "Humidity":
+                if sensorType == '23':
+                    if readingID == '01':
+                        return val
+            elif type == "Light_indoor":
+                if sensorType == '41':
+                    if readingID == '00':
+                        return val
+            elif type == "Light_outdoor":
+                if sensorType == '41':
+                    if readingID == '01':
+                        return val
+            elif type == "IR_Light_indoor":
+                if sensorType == '41':
+                    if readingID == '02':
+                        return val
+            elif type == "IR_Light_indoor":
+                if sensorType == '41':
+                    if readingID == '03':
+                        return val
+            elif type == "Light_reflection":
+                if sensorType == '41':
+                    if readingID == '0a':
+                        return val
+
+            '''
             elif sensorType == '61':
                 if readingID == '00':
                     print("Acceliration X", val)
+                    return val
                 elif readingID == '01':
                     print("Acceliration Y", val)
+                    return val
                 elif readingID == '02':
                     print("Acceliration Z", val)
+                    return val
             elif sensorType == '50':
                 if readingID == '00':
                     print("A/D input(1x gain) in µV", val)
+                    return val
                 elif readingID == '01':
                     print("A/D input(2x gain) in µV", val)
+                    return val
                 elif readingID == '02':
                     print("A/D input(4x gain) in µV", val)
+                    return val
                 elif readingID == '03':
-                    print("A/D input(8x gain) in µV", val)            
-
+                    print("A/D input(8x gain) in µV", val)
+                    return val       
+'''
             #print("values " + str(i), re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode()))
             #print("sensor value ", (re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode()))[9])
             #print("hex value packet ", binascii.hexlify(pk.read_sensor_values(i)).decode())
