@@ -163,6 +163,7 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x77, i, i, 0, 0, [])) #, 0, 1, 0, []
         return resp
     
+    
     def sensor_readout(self):
         for i in range(1,14):
             #print("config " + str(i), re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())) 
