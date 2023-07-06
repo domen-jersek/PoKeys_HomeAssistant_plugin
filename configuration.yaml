@@ -23,3 +23,4 @@ sensor:
   - platform: pokeys
     name: "PoKeys57E"
     serial: "31557"
+    type: "Temperature" #also supports Humidity, Light_indoor, Light_outdoor, IR_Light_indoor, IR_Light_outdoor, Light_reflection 
