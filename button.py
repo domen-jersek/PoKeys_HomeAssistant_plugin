@@ -76,33 +76,8 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
     buttons = pokeys.buttons
     logging.error(buttons)
-
-
-    try:
-        for button in buttons:
-            button = {
-                "name": button[0],
-                "serial": button[1],
-                "pin": button[2],
-                "delay": button[3],
-            }
-            
-            logging.error(button)
-            logging.error(button)
-            
-            async_add_entities([
-                PoKeys57E(
-                    hass,
-                    button["name"],
-                    button["serial"],
-                    button["pin"],
-                    button["delay"]
-                )
-            ])
-            platform_run = False
-    except:
-        pass
-
+    platform_run = True
+    
     try:
         button = {
             "name": config[CONF_NAME],
@@ -110,7 +85,6 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
             "pin": config[CONF_PIN],
             "delay": config[CONF_DELAY]
         }
-        logging.error(button)
         async_add_entities([
             PoKeys57E(
                 hass,
@@ -123,6 +97,24 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         platform_run = False
     except:
         pass
+    
+    if platform_run:
+        for button in buttons:
+            button = {
+                "name": button[0],
+                "serial": button[1],
+                "pin": button[2],
+                "delay": button[3],
+            }
+            async_add_entities([
+                PoKeys57E(
+                    hass,
+                    button["name"],
+                    button["serial"],
+                    button["pin"],
+                    button["delay"]
+                )
+            ])
     
     await component.async_setup(config)
 

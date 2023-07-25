@@ -75,37 +75,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 
     switches = pokeys.switches
-    logging.error(switches)
-    try:
-        for switch in switches:
-            switch = {
-                "name": switch[0],
-                "serial": switch[1],
-                "pin": switch[2],
-            }
-            
-            logging.error(switch)
-            logging.error(switch)
-            
-            async_add_entities([
-                PoKeys57E(
-                    hass,
-                    switch["name"],
-                    switch["serial"],
-                    switch["pin"]
-                )
-            ])
-        
-    except:
-        pass
-    
+    platform_run = True
+
     try:
         switch = {
             "name": config[CONF_NAME],
             "serial": config[CONF_SERIAL],
             "pin": config[CONF_PIN]
         }
-        logging.error(switch)
         async_add_entities([
             PoKeys57E(
                 hass,
@@ -114,8 +91,25 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                 config.get(CONF_PIN)
             )
         ])
+        platform_run = False
     except:
         pass
+    
+    if platform_run:
+        for switch in switches:
+            switch = {
+                "name": switch[0],
+                "serial": switch[1],
+                "pin": switch[2],
+            }
+            async_add_entities([
+                PoKeys57E(
+                    hass,
+                    switch["name"],
+                    switch["serial"],
+                    switch["pin"]
+                )
+            ])
 
     
     await component.async_setup(config)
