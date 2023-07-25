@@ -1,7 +1,7 @@
 {
     "domain": "pokeys",
     "name": "PoKeys57E",
-    "requierments": ["pymodbus==2.5.3", "socket"],
+    "requierments": ["socket", "netifaces==0.11.0"],
     "iot_state": "assumed_state",
     "version": "0.1.0"
 }
