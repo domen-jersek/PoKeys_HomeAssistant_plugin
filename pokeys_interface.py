@@ -169,7 +169,7 @@ class pokeys_interface():
         host = pk.device_discovery(serial)
         pk.connect(host)
         
-        for i in range(1,14):
+        for i in range(0,14):
             #print("config " + str(i), re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())) 
             #print("sensor type ", (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8])
             #print("reading ID ", (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9])
@@ -200,7 +200,7 @@ class pokeys_interface():
                 if sensorType == '41':
                     if readingID == '02':
                         return val
-            elif type == "IR_Light_indoor":
+            elif type == "IR_Light_outdoor":
                 if sensorType == '41':
                     if readingID == '03':
                         return val
@@ -208,18 +208,20 @@ class pokeys_interface():
                 if sensorType == '41':
                     if readingID == '0a':
                         return val
+            elif type == 'Acceleration_X':
+                if sensorType == '61':
+                    if readingID == '00':
+                        return val
+            elif type == 'Acceleration_Y':
+                if sensorType == '61':
+                    if readingID == '01':
+                        return val
+            elif type == 'Acceleration_Z':
+                if sensorType == '61':
+                    if readingID == '02':
+                        return val
 
             '''
-            elif sensorType == '61':
-                if readingID == '00':
-                    print("Acceliration X", val)
-                    return val
-                elif readingID == '01':
-                    print("Acceliration Y", val)
-                    return val
-                elif readingID == '02':
-                    print("Acceliration Z", val)
-                    return val
             elif sensorType == '50':
                 if readingID == '00':
                     print("A/D input(1x gain) in µV", val)
