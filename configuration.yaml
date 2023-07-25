@@ -1,8 +1,8 @@
 switch:
   - platform: pokeys
     name: "PoKeys57E"
-    serial: "31557"
-    pin: "12"
+    serial: 31557
+    pin: 12
   #- platform: pokeys  (syntax for multiple switch entities)
   #  name: "PoKeys57E_2"
   #  host: "192.168.1.105"
@@ -10,18 +10,42 @@ switch:
 button:
   - platform: pokeys
     name: "PoKeys57E"
-    serial: "31557"
-    pin: "13"
-    delay: "5" #describes how long(seconds) the button will be turned on after press is called
+    serial: 31557
+    pin: 13
+    delay: 5 #describes how long(seconds) the button will be turned on after press is called
 
 binary_sensor:
   - platform: pokeys
     name: "PoKeys57E"
-    serial: "31557"
-    pin: "8"
+    serial: 31557
+    pin: 8
 
 sensor:
   - platform: pokeys
     name: "PoKeys57E"
-    serial: "31557"
+    serial: 31557
     type: "Temperature" #also supports Humidity, Light_indoor, Light_outdoor, IR_Light_indoor, IR_Light_outdoor, Light_reflection, Acceleration_X, Acceleration_Y, Acceleration_Z 
+
+#or
+pokeys:
+  devices:
+    - name: "PoKeys57E_device_1"
+      serial: 31557
+      buttons:
+        - name: "pokeys_button_1"
+          pin: 13
+          delay: 4
+        - name: "pokeys_button_2"
+          pin: 12
+          delay: 2
+      binary_sensors:
+        - name: "pokeys_binary_sensor"
+          pin: 8
+    - name: "PoKeys57E_device_2"
+      serial: 31708
+      sensors:
+        - name: "pokeys_easy_sensor"
+          type: "Temperature"
+      switches:
+        - name: "pokeys_switch"
+          pin: 12
