@@ -6,6 +6,7 @@ import random
 import netifaces
 import binascii
 import re
+import logging
 
 class pokeys_interface():
     def __init__(self):
@@ -164,83 +165,21 @@ class pokeys_interface():
         return resp
     
     
-    def sensor_readout(self, serial, type):
+    def sensor_readout(self, serial, id):
         pk = pokeys_interface()
         host = pk.device_discovery(serial)
         pk.connect(host)
-        
-        for i in range(0,14):
-            #print("config " + str(i), re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())) 
-            #print("sensor type ", (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8])
-            #print("reading ID ", (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9])
-            config = re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())
-            valPacket = re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode())
-            sensorType = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8]
-            readingID = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9]
-            val_hex = str(valPacket[9])+str(valPacket[8])
-            val = int(val_hex, base=16)/100
-            if type == "Temperature":
-                if sensorType == '23':
-                    if readingID == '00':
-                        #print("Temperature: ", val)
-                        return val
-            elif type == "Humidity":
-                if sensorType == '23':
-                    if readingID == '01':
-                        return val
-            elif type == "Light_indoor":
-                if sensorType == '41':
-                    if readingID == '00':
-                        return val
-            elif type == "Light_outdoor":
-                if sensorType == '41':
-                    if readingID == '01':
-                        return val
-            elif type == "IR_Light_indoor":
-                if sensorType == '41':
-                    if readingID == '02':
-                        return val
-            elif type == "IR_Light_outdoor":
-                if sensorType == '41':
-                    if readingID == '03':
-                        return val
-            elif type == "Light_reflection":
-                if sensorType == '41':
-                    if readingID == '0a':
-                        return val
-            elif type == 'Acceleration_X':
-                if sensorType == '61':
-                    if readingID == '00':
-                        return val
-            elif type == 'Acceleration_Y':
-                if sensorType == '61':
-                    if readingID == '01':
-                        return val
-            elif type == 'Acceleration_Z':
-                if sensorType == '61':
-                    if readingID == '02':
-                        return val
+        i = int(id)
+        setup = binascii.hexlify(pk.sensor_setup(i))
+        read = binascii.hexlify(pk.read_sensor_values(i))
+        config = re.findall('..', setup.decode())
+        valPacket = re.findall('..', read.decode())
+        sensorType = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8]
+        readingID = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9]
+        val_hex = str(valPacket[9])+str(valPacket[8])
+        val = int(val_hex, base=16)/100
+        return val
 
-            '''
-            elif sensorType == '50':
-                if readingID == '00':
-                    print("A/D input(1x gain) in µV", val)
-                    return val
-                elif readingID == '01':
-                    print("A/D input(2x gain) in µV", val)
-                    return val
-                elif readingID == '02':
-                    print("A/D input(4x gain) in µV", val)
-                    return val
-                elif readingID == '03':
-                    print("A/D input(8x gain) in µV", val)
-                    return val       
-'''
-            #print("values " + str(i), re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode()))
-            #print("sensor value ", (re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode()))[9])
-            #print("hex value packet ", binascii.hexlify(pk.read_sensor_values(i)).decode())
-            #print("dec value ", int(str(binascii.hexlify(pk.read_sensor_values(i)).decode()), base=16), "\n")
-    
     def device_discovery(self, serial_num_input):
         broadcast_address = '<broadcast>'
         port = 20055
@@ -296,6 +235,39 @@ class pokeys_interface():
                         
                         udp_socket.close()
                         
+            except ValueError:
+                pass 
+
+    def new_device_notify(self):
+        
+        broadcast_address = '<broadcast>'
+        port = 20055
+        message = b'Discovery request'
+        interfaces = netifaces.interfaces()
+        for interface in interfaces:
+            try:
+                addresses = netifaces.ifaddresses(interface)
+                if netifaces.AF_INET in addresses:
+                    ipv4_addresses = addresses[netifaces.AF_INET]
+                    for address_info in ipv4_addresses:
+                        ip_address = address_info['addr']
+                        ip_int = socket.inet_aton(ip_address).hex()
+                        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        try:
+                            udp_socket.bind((ip_address, 0))
+                        except: socket.error
+                        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                        udp_socket.sendto(message, (broadcast_address, port))
+                        udp_socket.settimeout(2)
+                        while True:
+                            try:
+                                data, address = udp_socket.recvfrom(1024)
+                                serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
+                                serial_num_dec = int(serial_num_hex, 16)
+                                return serial_num_dec
+                            except socket.timeout:
+                                break
+                        udp_socket.close()          
             except ValueError:
                 pass 
             
