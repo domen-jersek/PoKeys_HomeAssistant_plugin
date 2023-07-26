@@ -48,15 +48,18 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from datetime import timedelta
 from homeassistant.helpers.entity import Entity
-
 from typing import TypedDict
+from homeassistant.core import HomeAssistant
+from homeassistant.components.persistent_notification import create
+
+
 pk = pokeys_interface()
 
 
 DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
 CONF_PIN = "pin"
-CONF_TYPE = "type"
+CONF_TYPE = "id"
 
 PLATFORM_POKEYS = "pokeys"
 
@@ -64,7 +67,7 @@ ENTITY_SCHEMA = vol.Schema(
     {
         vol.Required("name"): cv.string,
         vol.Optional("pin"): cv.string,
-        vol.Optional("type"): cv.string,
+        vol.Optional("id"): cv.string,
         vol.Optional("delay"): cv.string,
     }
 )
@@ -95,6 +98,10 @@ CONFIG_SCHEMA = vol.Schema(
 
 _LOGGER = logging.getLogger("pokeys")
 
+def send_notification(hass: HomeAssistant, message):
+    create(hass, message, "New PoKeys device discovered")     
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the your_integration component."""
     if DOMAIN not in config:
@@ -107,6 +114,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     
     global buttons
     global switches
+    global sensors
     buttons = []
     switches = []
     sensors = []
@@ -151,29 +159,27 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         try:
             for entity_config in device_config["sensors"]:
                 name_sensor = entity_config["name"]
-                type_sensor = entity_config["type"]
+                type_sensor = entity_config["id"]
 
                 entity_sensor = [name_sensor, serial, type_sensor]
                 sensors.append(entity_sensor)
 
-                await async_setup_platform_sensor(hass, config, AddEntitiesCallback, entity_sensor, discovery_info=None)
+                #await async_setup_platform_sensor(hass, config, AddEntitiesCallback, entity_sensor, discovery_info=None)
         except:
             pass
-
-        logging.error("entity start")
-        logging.error(device_config)
         
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
-    
+    hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
+
+    if pk.new_device_notify() != None:
+        send_notification(hass, "Discovered PoKeys device with serial number " + str(pk.new_device_notify()))
+
     return True
-        
 
 async def async_setup_platform_binary_sensor(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallback, binary_sensor, discovery_info=None) -> bool:
-    logging.error("setup entry")
     await EntityPlatform(hass=hass, logger=_LOGGER, domain="binary_sensor", platform_name="pokeys", platform=pokeys, scan_interval=timedelta(seconds=8), entity_namespace=None).async_add_entities([PoKeys57E_binary_sensor(hass, binary_sensor[0], binary_sensor[1], binary_sensor[2])]) 
 
-async def async_setup_platform_sensor(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallback, sensor, discovery_info=None) -> bool:
-    logging.error("setup entry")
-    await EntityPlatform(hass=hass, logger=_LOGGER, domain="sensor", platform_name="pokeys", platform=pokeys, scan_interval=timedelta(seconds=8), entity_namespace=None).async_add_entities([PoKeys57E_sensor(hass, sensor[0], sensor[1], sensor[2])]) 
+#async def async_setup_platform_sensor(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallback, sensor, discovery_info=None) -> bool:
+#    await EntityPlatform(hass=hass, logger=_LOGGER, domain="sensor", platform_name="pokeys", platform=pokeys, scan_interval=timedelta(seconds=8), entity_namespace=None).async_add_entities([PoKeys57E_sensor(hass, sensor[0], sensor[1], sensor[2])]) 
 
