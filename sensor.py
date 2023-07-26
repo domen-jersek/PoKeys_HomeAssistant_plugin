@@ -48,6 +48,7 @@ from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 from homeassistant.helpers.typing import UNDEFINED, ConfigType, StateType, UndefinedType
 from homeassistant.util import dt as dt_util
 from homeassistant.util.enum import try_parse_enum
+from custom_components import pokeys
 
 from datetime import timedelta
 
@@ -88,7 +89,7 @@ pk = pokeys_interface()
 _LOGGER = logging.getLogger("pokeys")
 DOMAIN = "PoKeys57E"
 CONF_SERIAL = "serial"
-CONF_TYPE = "type"
+CONF_TYPE = "id"
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
@@ -123,24 +124,49 @@ __all__ = [
 # mypy: disallow-any-generics
 
 
-async def async_setup_platform(hass: HomeAssistant, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool: # -> bool
+async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool: # -> bool
     """Track states and offer events for sensors."""
     component = hass.data[DOMAIN] = EntityComponent[SensorEntity](
         logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
     )
-    sensor = {
-        "name": config[CONF_NAME],
-        "serial": config[CONF_SERIAL],
-        "type": config[CONF_TYPE]
-    }
-    add_entities([
-        PoKeys57E(
-            hass,
-            config.get(CONF_NAME),
-            config.get(CONF_SERIAL),
-            config.get(CONF_TYPE),
-        )
-    ])
+
+    sensors = pokeys.sensors
+    platform_run = True
+
+    try:
+        sensor = {
+            "name": config[CONF_NAME],
+            "serial": config[CONF_SERIAL],
+            "id": config[CONF_TYPE]
+        }
+        add_entities([
+            PoKeys57E(
+                hass,
+                config.get(CONF_NAME),
+                config.get(CONF_SERIAL),
+                config.get(CONF_TYPE),
+            )
+        ])
+        platform_run = False
+    except:
+        pass
+    
+    if platform_run:
+        for sensor in sensors:
+            sensor = {
+                "name": sensor[0],
+                "serial": sensor[1],
+                "pin": sensor[2],
+            }
+            async_add_entities([
+                PoKeys57E(
+                    hass,
+                    sensor["name"],
+                    sensor["serial"],
+                    sensor["pin"]
+                )
+            ])
+
 
     async_setup_ws_api(hass)
     _LOGGER.info(pformat(config))
@@ -197,15 +223,14 @@ class PoKeys57E(SensorEntity):
     _sensor_option_display_precision: int | None = None
     _sensor_option_unit_of_measurement: str | None | UndefinedType = UNDEFINED
 
-    def __init__(self, hass, name, serial, type):
+    def __init__(self, hass, name, serial, id):
         self._serial = serial
         host = pk.device_discovery(serial)
         self._sensor = pokeys_instance(host)
         self._hass = hass
         
         self._name = name
-        self._type = type
-        #self._state = False
+        self._id = id
         self._attr_state_class = STATE_CLASS_MEASUREMENT
         pk.connect(host)
 
@@ -294,7 +319,7 @@ class PoKeys57E(SensorEntity):
         """Update the sensor value."""
         # Implement your logic to retrieve or calculate the sensor value
         
-        self._state = pk.sensor_readout(self._serial, self._type)
+        self._state = pk.sensor_readout(self._serial, self._id)
         #self._state = 42
         return self._state
 
@@ -441,7 +466,7 @@ class PoKeys57E(SensorEntity):
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
-        self._attr_native_value = pk.sensor_readout(self._serial, self._type)
+        self._attr_native_value = pk.sensor_readout(self._serial, self._id)
         return self._attr_native_value
 
     @property
@@ -521,7 +546,7 @@ class PoKeys57E(SensorEntity):
         native_unit_of_measurement = self.native_unit_of_measurement
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
-        value = pk.sensor_readout(self._serial, self._type)
+        value = pk.sensor_readout(self._serial, self._id)
         # For the sake of validation, we can ignore custom device classes
         # (customization and legacy style translations)
         device_class = try_parse_enum(SensorDeviceClass, self.device_class)
@@ -943,7 +968,7 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
         return sensor_options.get("suggested_display_precision")
 
     value = state.state
-    value = pk.sensor_readout(self._serial, self._type)
+    value = pk.sensor_readout(self._serial, self._id)
     if (precision := display_precision()) is None:
         return value
 
