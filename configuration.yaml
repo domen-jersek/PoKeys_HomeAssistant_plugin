@@ -16,8 +16,8 @@ pokeys:
     - name: "PoKeys57E_device_2"
       serial: 31708
       sensors:
-        - name: "pokeys_easy_sensor"
-          type: "Temperature"
+        - name: "pokeys_easy_sensor_temperature"
+          id: 0
       switches:
         - name: "pokeys_switch"
           pin: 12
@@ -50,5 +50,5 @@ sensor:
   - platform: pokeys
     name: "PoKeys57E"
     serial: 31557
-    type: "Temperature" #also supports Humidity, Light_indoor, Light_outdoor, IR_Light_indoor, IR_Light_outdoor, Light_reflection, Acceleration_X, Acceleration_Y, Acceleration_Z
+    id: 0 #sensor id
 
