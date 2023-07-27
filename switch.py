@@ -12,8 +12,8 @@ from .pokeys import pokeys_instance
 from pprint import pformat
 from homeassistant.backports.enum import StrEnum
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.switch import (PLATFORM_SCHEMA, PLATFORM_SCHEMA_BASE, SwitchEntity) 
-from homeassistant.const import (CONF_NAME, CONF_PIN) 
+from homeassistant.components.switch import (PLATFORM_SCHEMA, PLATFORM_SCHEMA_BASE, SwitchEntity)  #, SwitchDevice
+from homeassistant.const import (CONF_NAME, CONF_PIN) #, CONF_SERIAL
 from homeassistant.const import (
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
@@ -59,16 +59,12 @@ class SwitchDeviceClass(StrEnum):
     SWITCH = "switch"
 
 DEVICE_CLASSES_SCHEMA = vol.All(vol.Lower, vol.Coerce(SwitchDeviceClass))
-
-# DEVICE_CLASS* below are deprecated as of 2021.12
-# use the SwitchDeviceClass enum instead.
 DEVICE_CLASSES = [cls.value for cls in SwitchDeviceClass]
 DEVICE_CLASS_OUTLET = SwitchDeviceClass.OUTLET.value
 DEVICE_CLASS_SWITCH = SwitchDeviceClass.SWITCH.value
 
 
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None):
-
     component = hass.data[DOMAIN] = EntityComponent[SwitchEntity](
         _LOGGER, DOMAIN, hass, SCAN_INTERVAL
     )
@@ -136,6 +132,7 @@ class PoKeys57E(SwitchEntity):
         self._state = None
         
         pk.connect(host)
+        pk.set_pin_function(int(pin)-1, 4)
 
     @property
     def name(self):
@@ -147,50 +144,56 @@ class PoKeys57E(SwitchEntity):
     
     def turn_on(self, **kwargs): 
         pin = self._pin
-        pk.set_pin_function(int(pin)-1, 4)
-        self._state = True
+        pk.set_output(int(pin)-1, 1)
+        if pokeys.inputs[int(pin)-1]:
+            self._state = True
+        
         self.schedule_update_ha_state()
 
 
     def turn_off(self, **kwargs):
         pin = self._pin
-        pk.set_pin_function(int(pin)-1, 2)
-        self._state = False
+        pk.set_output(int(pin)-1, 0)
+        if pokeys.inputs[int(pin)-1] == False:
+            self._state = False
         self.schedule_update_ha_state()
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    
+    """Set up a config entry."""
     component: EntityComponent[SwitchEntity] = hass.data[DOMAIN]
     return await component.async_setup_entry(entry)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    
+    """Unload a config entry."""
     component: EntityComponent[SwitchEntity] = hass.data[DOMAIN]
     return await component.async_unload_entry(entry)
 
 @dataclass
 class SwitchEntityDescription(ToggleEntityDescription):
+    """A class that describes switch entities."""
 
     device_class: SwitchDeviceClass | None = None
 
 
 class SwitchEntity(ToggleEntity):
+    """Base class for switch entities."""
 
     entity_description: SwitchEntityDescription
     _attr_device_class: SwitchDeviceClass | None
 
-    def __init__(self, hass, name, serial, pin):
+    def __init__(self, hass, name, serial, pin): 
         self._serial = serial
         host = pk.device_discovery(serial)
         self._switch = pokeys_instance(host)
 
         self._hass = hass
-        self._name = name 
+        self._name = name  
         self._pin = pin
         self._state = None
         
         pk.connect(host)
+        pk.set_pin_function(int(pin)-1, 4)
 
     @property
     def name(self):
@@ -202,15 +205,17 @@ class SwitchEntity(ToggleEntity):
     
     def turn_on(self, **kwargs): 
         pin = self._pin
-        pk.set_pin_function(int(pin)-1, 4)
-        self._state = True
+        pk.set_output(int(pin)-1, 1)
+        if pokeys.inputs[int(pin)-1]:
+            self._state = True
         self.schedule_update_ha_state()
 
 
     def turn_off(self, **kwargs):
         pin = self._pin
-        pk.set_pin_function(int(pin)-1, 2)
-        self._state = False
+        pk.set_output(int(pin)-1, 0)
+        if pokeys.inputs[int(pin)-1] == False:
+            self._state = False
         self.schedule_update_ha_state()
 
     @property

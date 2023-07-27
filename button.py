@@ -34,6 +34,9 @@ from homeassistant.helpers.entity import EntityDescription
 from typing import TypedDict, Literal, final
 import time
 from custom_components import pokeys
+import asyncio
+import threading
+
 
 from .pokeys_interface import pokeys_interface
 
@@ -64,18 +67,17 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.Optional(CONF_DELAY): cv.string,
 })
 
-_LOGGER = logging.getLogger("pokeys")
 pk = pokeys_interface()
 
+mutex = threading.Lock()
 
-async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None):
+async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None): #hass, config, async_add_entities, discovery_info=None
     """Set up the custom button platform."""
     component = hass.data[DOMAIN] = EntityComponent[ButtonEntity](
         logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
     )
 
     buttons = pokeys.buttons
-    logging.error(buttons)
     platform_run = True
     
     try:
@@ -116,6 +118,8 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                 )
             ])
     
+        
+
     await component.async_setup(config)
 
     component.async_register_entity_service(
@@ -123,8 +127,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         {},
         "_async_press_action",
     )
+
     
+    # Create the custom button entity
+    #button = PoKeys57E(hass, name, host)
     _LOGGER.info(pformat(config))
+    # Add the entity to Home Assistant
+    #async_add_entities([button])
+    #add_entities([PoKeys57E(button)])
     return True
 
 
@@ -141,6 +151,10 @@ class PoKeys57E(ButtonEntity):
         self._delay = delay
         self._state = "released"
         pk.connect(host)
+        pk.set_pin_function(int(self._pin)-1, 4)
+        pk.set_output(int(self._pin)-1, 0)
+        
+        
 
     @property
     def name(self):
@@ -161,31 +175,58 @@ class PoKeys57E(ButtonEntity):
     async def async_added_to_hass(self):
         """Perform any actions when the button entity is added to Home Assistant."""
         _LOGGER.info("Custom button entity added to Home Assistant.")
+
     
     async def async_will_remove_from_hass(self):
         """Perform any actions when the button entity is removed from Home Assistant."""
         _LOGGER.info("Custom button entity removed from Home Assistant.")
     
     def press(self) -> None:
-        self._state = "pressed"
         _LOGGER.info("Custom button pressed.")
         pin = self._pin
         delay =self._delay
-        pk.set_pin_function(int(pin)-1, 4)
+        
+        
+        
+        pk.set_output(int(pin)-1, 1)
+        
+        
+        logging.error("before "+str(time.time()))
+        global mutex
+        mutex.acquire()
+        logging.error(pokeys.inputs[int(pin)-1])
+        logging.error("after "+ str(time.time()))
+        if pokeys.inputs[int(pin)-1]:
+            self._state = "pressed"
+            logging.error("pressed state")
+        
         time.sleep(int(delay))
-        self._state = "released"
+
+        pk.set_output(int(pin)-1, 0)
+        
+        mutex.acquire()
+        
+        if pokeys.inputs[int(pin)-1] == False:
+            self._state = "released"
+            logging.error("relesed state")
+        
+        
         _LOGGER.info("Custom button released.")
-        pk.set_pin_function(int(pin)-1, 2)
+        
 
     
-    def turn_off(self):
-        self._state = "released"
+    async def async_turn_off(self):
         _LOGGER.info("Custom button released.")
-        pk.set_pin_function(pin-1, 2)
+        global mutex
+        pk.set_output(int(pin)-1, 0)
+        
+        mutex.acquire()
+        if pk.inputs[int(pin)-1] == False:
+            self._state = "released"
 
+        
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Set up a config entry."""
-    logging.error("setup entry in button")
     button_component = hass.data[DOMAIN] = EntityComponent[ButtonEntity](
         logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
     )
@@ -204,7 +245,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: Con
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    logging.error("unload entry in button")
     component: EntityComponent[ButtonEntity] = hass.data[DOMAIN]
     return await component.async_unload_entry(entry)
 
@@ -227,6 +267,8 @@ class ButtonEntity(RestoreEntity):
 
     def __init__(self, hass, name, serial, pin, delay):
         """Initialize the button entity."""
+        #_attr_has_entity_name = True
+        #pk = pokeys_interface()
         self._serial = serial
         host = pk.device_discovery(serial)
         self._button = pokeys_instance(host)
@@ -235,8 +277,11 @@ class ButtonEntity(RestoreEntity):
         self._name = name
         self._pin = pin
         self._delay = delay
+        #self._platform = platform
         self._state = "released"
         pk.connect(host)
+        pk.set_pin_function(int(self._pin)-1, 4)
+        pk.set_output(int(pin)-1, 0)
 
     @property
     def name(self):
@@ -250,6 +295,7 @@ class ButtonEntity(RestoreEntity):
 
     async def async_press(self) -> None:
         await self.hass.async_add_executor_job(self.press)
+        
 
     def _default_to_device_class_name(self) -> bool:
         """Return True if an unnamed entity should be named by its device class.
@@ -281,7 +327,6 @@ class ButtonEntity(RestoreEntity):
 
         Should not be overridden, handle setting last press timestamp.
         """
-        logging.error("press action called")
         self.__last_pressed = dt_util.utcnow()
         self.async_write_ha_state()
         await self.async_press()
@@ -294,14 +339,29 @@ class ButtonEntity(RestoreEntity):
             self.__last_pressed = dt_util.parse_datetime(state.state)
 
     def press(self) -> None:
-        self._state = "pressed"
-        logging.error("button pressed")
+
         _LOGGER.info("Custom button pressed.")
         pin = self._pin
         delay =self._delay
-        pk.set_pin_function(int(pin)-1, 4)
+        
+        
+        
+        pk.set_output(int(pin)-1, 1)
+        global mutex
+        mutex.acquire()
+            
+        if pokeys.inputs[int(pin)-1]:
+            self._state = "pressed"
+            logging.error("pressedd state")
+            
         time.sleep(int(delay))
-        self._state = "released"
-        _LOGGER.info("Custom button released.")
-        pk.set_pin_function(int(pin)-1, 2)
 
+        pk.set_output(int(pin)-1, 0)
+        
+        mutex.acquire()
+        if pokeys.inputs[int(pin)-1] == False:
+            self._state = "released"
+            logging.error("relesed state")
+        
+        
+        _LOGGER.info("Custom button released.")
