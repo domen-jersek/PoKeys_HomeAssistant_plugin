@@ -37,6 +37,7 @@ from homeassistant import loader
 from homeassistant import helpers
 from homeassistant import components
 from pprint import pformat
+import time
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
@@ -48,10 +49,13 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from datetime import timedelta
 from homeassistant.helpers.entity import Entity
+import threading
 from typing import TypedDict
 from homeassistant.core import HomeAssistant
 from homeassistant.components.persistent_notification import create
-
+from homeassistant.helpers.event import async_track_time_interval
+import asyncio
+from .button import mutex
 
 pk = pokeys_interface()
 
@@ -107,7 +111,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if DOMAIN not in config:
         return True
     
-    
     devices = []
     
     entry = config[DOMAIN]#config[DOMAIN]
@@ -123,59 +126,82 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     for device_config in entry["devices"]: #entry.data["devices"]
         name = device_config["name"]
         serial = device_config["serial"]
+        host = pk.device_discovery(serial)
+        if pk.connect(host):
+            try:
+                for entity_config in device_config["buttons"]:
+                    name_button = entity_config["name"]
+                    pin_button = entity_config["pin"]
+                    delay_button = entity_config["delay"]
+                    
+                    entity_button = [name_button, serial, pin_button, delay_button]
+                    buttons.append(entity_button)
+                    
+            except:
+                pass
+            try:
+                for entity_config in device_config["switches"]:
+                    name_switch = entity_config["name"]
+                    pin_switch = entity_config["pin"]
 
-        try:
-            for entity_config in device_config["buttons"]:
-                name_button = entity_config["name"]
-                pin_button = entity_config["pin"]
-                delay_button = entity_config["delay"]
-                
-                entity_button = [name_button, serial, pin_button, delay_button]
-                buttons.append(entity_button)
-                
-        except:
-            pass
-        try:
-            for entity_config in device_config["switches"]:
-                name_switch = entity_config["name"]
-                pin_switch = entity_config["pin"]
+                    entity_switch = [name_switch, serial, pin_switch]
+                    switches.append(entity_switch)
+                    
+            except:
+                pass
+            try:
+                for entity_config in device_config["binary_sensors"]:
+                    name_binary_sensor = entity_config["name"]
+                    pin_binary_sensor = entity_config["pin"]
 
-                entity_switch = [name_switch, serial, pin_switch]
-                switches.append(entity_switch)
-                
-        except:
-            pass
-        try:
-            for entity_config in device_config["binary_sensors"]:
-                name_binary_sensor = entity_config["name"]
-                pin_binary_sensor = entity_config["pin"]
+                    entity_binary_sensor = [name_binary_sensor, serial, pin_binary_sensor]
+                    binary_sensors.append(entity_binary_sensor)
 
-                entity_binary_sensor = [name_binary_sensor, serial, pin_binary_sensor]
-                binary_sensors.append(entity_binary_sensor)
+                    await async_setup_platform_binary_sensor(hass, config, AddEntitiesCallback, entity_binary_sensor, discovery_info=None)
+            except:
+                pass
+            try:
+                for entity_config in device_config["sensors"]:
+                    name_sensor = entity_config["name"]
+                    type_sensor = entity_config["id"]
 
-                await async_setup_platform_binary_sensor(hass, config, AddEntitiesCallback, entity_binary_sensor, discovery_info=None)
-        except:
-            pass
-        try:
-            for entity_config in device_config["sensors"]:
-                name_sensor = entity_config["name"]
-                type_sensor = entity_config["id"]
+                    entity_sensor = [name_sensor, serial, type_sensor]
+                    sensors.append(entity_sensor)
 
-                entity_sensor = [name_sensor, serial, type_sensor]
-                sensors.append(entity_sensor)
-
-                #await async_setup_platform_sensor(hass, config, AddEntitiesCallback, entity_sensor, discovery_info=None)
-        except:
-            pass
+                    #await async_setup_platform_sensor(hass, config, AddEntitiesCallback, entity_sensor, discovery_info=None)
+            except:
+                pass
+            
+            async_track_time_interval(hass, read_inputs_update_cycle, timedelta(seconds=1))
+            #read_inputs_thread = threading.Thread(target=read_inputs_update_cycle)
+            #read_inputs_thread.start()
         
+        else:
+            logging.error("Device " + serial + " not avalible")
+
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
 
     if pk.new_device_notify() != None:
         send_notification(hass, "Discovered PoKeys device with serial number " + str(pk.new_device_notify()))
-
+        
+    
+        
     return True
+
+    
+def read_inputs_update_cycle(self):
+    
+    pk.read_inputs()
+    global inputs
+    inputs = pk.inputs
+    
+    if mutex.locked():
+        logging.error(time.time())
+        mutex.release()
+    
+        
 
 async def async_setup_platform_binary_sensor(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallback, binary_sensor, discovery_info=None) -> bool:
     await EntityPlatform(hass=hass, logger=_LOGGER, domain="binary_sensor", platform_name="pokeys", platform=pokeys, scan_interval=timedelta(seconds=8), entity_namespace=None).async_add_entities([PoKeys57E_binary_sensor(hass, binary_sensor[0], binary_sensor[1], binary_sensor[2])]) 
