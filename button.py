@@ -34,7 +34,6 @@ from homeassistant.helpers.entity import EntityDescription
 from typing import TypedDict, Literal, final
 import time
 from custom_components import pokeys
-import asyncio
 import threading
 
 
@@ -68,8 +67,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 pk = pokeys_interface()
-
-mutex = threading.Lock()
 
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None): #hass, config, async_add_entities, discovery_info=None
     """Set up the custom button platform."""
@@ -182,6 +179,26 @@ class PoKeys57E(ButtonEntity):
         _LOGGER.info("Custom button entity removed from Home Assistant.")
     
     def press(self) -> None:
+        '''
+        _LOGGER.info("Custom button pressed.")
+        pin = self._pin
+        delay =self._delay
+        
+        pk.set_output(int(pin)-1, 1)
+        
+        #pk.read_inputs()
+        if pokeys.inputs[int(pin)-1]:
+            self._state = "pressed"
+        
+        time.sleep(int(delay))
+
+        pk.set_output(int(pin)-1, 0)
+        
+        #pk.read_inputs()
+        if pokeys.inputs[int(pin)-1] == False:
+            self._state = "released"
+        _LOGGER.info("Custom button released.")
+        '''
         _LOGGER.info("Custom button pressed.")
         pin = self._pin
         delay =self._delay
@@ -191,24 +208,23 @@ class PoKeys57E(ButtonEntity):
         pk.set_output(int(pin)-1, 1)
         
         
-        logging.error("before "+str(time.time()))
-        global mutex
-        mutex.acquire()
-        logging.error(pokeys.inputs[int(pin)-1])
-        logging.error("after "+ str(time.time()))
+        pokeys.inputs_updated.wait()
+        #try:
+        #    pass
+        #finally:
+        
         if pokeys.inputs[int(pin)-1]:
             self._state = "pressed"
-            logging.error("pressed state")
+            #logging.error("pressed state")
         
         time.sleep(int(delay))
 
         pk.set_output(int(pin)-1, 0)
-        
-        mutex.acquire()
+        pokeys.inputs_updated.wait()
         
         if pokeys.inputs[int(pin)-1] == False:
             self._state = "released"
-            logging.error("relesed state")
+            #logging.error("relesed state")
         
         
         _LOGGER.info("Custom button released.")
@@ -217,11 +233,10 @@ class PoKeys57E(ButtonEntity):
     
     async def async_turn_off(self):
         _LOGGER.info("Custom button released.")
-        global mutex
         pk.set_output(int(pin)-1, 0)
         
-        mutex.acquire()
-        if pk.inputs[int(pin)-1] == False:
+        pokeys.inputs_updated.wait()
+        if pokeys.inputs[int(pin)-1] == False:
             self._state = "released"
 
         
@@ -339,7 +354,17 @@ class ButtonEntity(RestoreEntity):
             self.__last_pressed = dt_util.parse_datetime(state.state)
 
     def press(self) -> None:
-
+        '''
+        self._state = "pressed"
+        _LOGGER.info("Custom button pressed.")
+        pin = self._pin
+        delay =self._delay
+        pk.set_pin_function(int(pin)-1, 4)
+        time.sleep(int(delay))
+        self._state = "released"
+        _LOGGER.info("Custom button released.")
+        pk.set_pin_function(int(pin)-1, 2)
+        '''
         _LOGGER.info("Custom button pressed.")
         pin = self._pin
         delay =self._delay
@@ -347,21 +372,19 @@ class ButtonEntity(RestoreEntity):
         
         
         pk.set_output(int(pin)-1, 1)
-        global mutex
-        mutex.acquire()
-            
+        pokeys.inputs_updated.wait()
         if pokeys.inputs[int(pin)-1]:
             self._state = "pressed"
-            logging.error("pressedd state")
-            
+            #logging.error("pressedd state")
+                
         time.sleep(int(delay))
 
         pk.set_output(int(pin)-1, 0)
         
-        mutex.acquire()
+        pokeys.inputs_updated.wait()
         if pokeys.inputs[int(pin)-1] == False:
             self._state = "released"
-            logging.error("relesed state")
+            #logging.error("relesed state")
         
         
         _LOGGER.info("Custom button released.")

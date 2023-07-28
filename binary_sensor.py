@@ -30,16 +30,16 @@ from homeassistant.util import dt as dt_util
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_NAME
 from homeassistant.const import CONF_PIN
+from custom_components import pokeys
 #cv = config_validation()
 
 from .pokeys_interface import pokeys_interface
 pk = pokeys_interface()
-#pin = 8
 
 _LOGGER = logging.getLogger("pokeys")
 
 DOMAIN = "PoKeys57E"
-SCAN_INTERVAL = timedelta(seconds=8)
+SCAN_INTERVAL = timedelta(seconds=2)
 CONF_SERIAL = "serial"
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
@@ -210,6 +210,7 @@ class PoKeys57E(BinarySensorEntity):
         self._pin = pin
         self._state = False
         pk.connect(host)
+        pk.set_pin_function(int(self._pin)-1, 2)
 
     @property
     def name(self):
@@ -219,23 +220,15 @@ class PoKeys57E(BinarySensorEntity):
     def is_on(self):
         return self._state
     
-    #host = PoKeys57E(config.get(CONF_HOST))
     async def async_update(self):
-        # Code to read the state of your IO device
-        # and set self._state accordingly
-        #self._state = read_io_device_state()
         
-        #pk.connect(_host) #"192.168.0.103"
-        #_state = pk.read_digital_input(7)
-        #self.pk.read_pin_function(pin)
         pin = self._pin
-        self._state = pk.read_digital_input(int(pin)-1)
+        self._state = pokeys.inputs[int(pin)-1]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Set up a config entry."""
 
-    #async_add_entities(PoKeys57E(hass, CONF_NAME, CONF_HOST))
     
     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
     return await component.async_setup_entry(entry)
@@ -275,6 +268,7 @@ class BinarySensorEntity(Entity):
         self._pin = pin
         self._state = False
         pk.connect(host)
+        pk.set_pin_function(int(self._pin)-1, 2)
 
     @property
     def name(self):
@@ -297,9 +291,8 @@ class BinarySensorEntity(Entity):
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
         
-        #pk.connect("192.168.0.103")
         pin = self._pin
-        if pk.read_digital_input(int(pin)-1) == "on":
+        if pokeys.inputs[int(pin)-1]:
             return self._attr_is_on
         return self._state
 

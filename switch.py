@@ -28,6 +28,7 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
 from custom_components import pokeys
+import threading
 
 from homeassistant.components.switch import DOMAIN
 
@@ -63,6 +64,7 @@ DEVICE_CLASSES = [cls.value for cls in SwitchDeviceClass]
 DEVICE_CLASS_OUTLET = SwitchDeviceClass.OUTLET.value
 DEVICE_CLASS_SWITCH = SwitchDeviceClass.SWITCH.value
 
+mutex = threading.Lock()
 
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None):
     component = hass.data[DOMAIN] = EntityComponent[SwitchEntity](
@@ -142,18 +144,20 @@ class PoKeys57E(SwitchEntity):
     def is_on(self):
         return self._state
     
-    def turn_on(self, **kwargs): 
+    def turn_on(self): 
         pin = self._pin
         pk.set_output(int(pin)-1, 1)
+        pokeys.inputs_updated.wait()
         if pokeys.inputs[int(pin)-1]:
             self._state = True
         
         self.schedule_update_ha_state()
 
 
-    def turn_off(self, **kwargs):
+    def turn_off(self):#, **kwargs
         pin = self._pin
         pk.set_output(int(pin)-1, 0)
+        pokeys.inputs_updated.wait()
         if pokeys.inputs[int(pin)-1] == False:
             self._state = False
         self.schedule_update_ha_state()
@@ -203,17 +207,19 @@ class SwitchEntity(ToggleEntity):
     def is_on(self):
         return self._state
     
-    def turn_on(self, **kwargs): 
+    def turn_on(self): 
         pin = self._pin
         pk.set_output(int(pin)-1, 1)
+        pokeys.inputs_updated.wait()
         if pokeys.inputs[int(pin)-1]:
             self._state = True
         self.schedule_update_ha_state()
 
 
-    def turn_off(self, **kwargs):
+    def turn_off(self):
         pin = self._pin
         pk.set_output(int(pin)-1, 0)
+        pokeys.inputs_updated.wait()
         if pokeys.inputs[int(pin)-1] == False:
             self._state = False
         self.schedule_update_ha_state()
