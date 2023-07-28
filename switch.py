@@ -32,7 +32,7 @@ import threading
 
 from homeassistant.components.switch import DOMAIN
 
-SCAN_INTERVAL = timedelta(seconds=8)
+SCAN_INTERVAL = timedelta(seconds=1)
 
 from .pokeys_interface import pokeys_interface
 
@@ -72,7 +72,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     )
 
 
-    switches = pokeys.switches
+    switches = hass.data.get("switches", None)
     platform_run = True
 
     try:
@@ -132,6 +132,7 @@ class PoKeys57E(SwitchEntity):
         self._name = name  
         self._pin = pin
         self._state = None
+        self._inputs_updated = self._hass.data.get("inputs_updated", None)
         
         pk.connect(host)
         pk.set_pin_function(int(pin)-1, 4)
@@ -147,8 +148,8 @@ class PoKeys57E(SwitchEntity):
     def turn_on(self): 
         pin = self._pin
         pk.set_output(int(pin)-1, 1)
-        pokeys.inputs_updated.wait()
-        if pokeys.inputs[int(pin)-1]:
+        self._inputs_updated.wait()
+        if pk.inputs[int(pin)-1]:
             self._state = True
         
         self.schedule_update_ha_state()
@@ -157,8 +158,8 @@ class PoKeys57E(SwitchEntity):
     def turn_off(self):#, **kwargs
         pin = self._pin
         pk.set_output(int(pin)-1, 0)
-        pokeys.inputs_updated.wait()
-        if pokeys.inputs[int(pin)-1] == False:
+        self._inputs_updated.wait()
+        if pk.inputs[int(pin)-1] == False:
             self._state = False
         self.schedule_update_ha_state()
 
@@ -195,6 +196,7 @@ class SwitchEntity(ToggleEntity):
         self._name = name  
         self._pin = pin
         self._state = None
+        self._inputs_updated = self._hass.data.get("inputs_updated", None)
         
         pk.connect(host)
         pk.set_pin_function(int(pin)-1, 4)
@@ -210,8 +212,8 @@ class SwitchEntity(ToggleEntity):
     def turn_on(self): 
         pin = self._pin
         pk.set_output(int(pin)-1, 1)
-        pokeys.inputs_updated.wait()
-        if pokeys.inputs[int(pin)-1]:
+        self._inputs_updated.wait()
+        if pk.inputs[int(pin)-1]:
             self._state = True
         self.schedule_update_ha_state()
 
@@ -219,8 +221,8 @@ class SwitchEntity(ToggleEntity):
     def turn_off(self):
         pin = self._pin
         pk.set_output(int(pin)-1, 0)
-        pokeys.inputs_updated.wait()
-        if pokeys.inputs[int(pin)-1] == False:
+        self._inputs_updated.wait()
+        if pk.inputs[int(pin)-1] == False:
             self._state = False
         self.schedule_update_ha_state()
 

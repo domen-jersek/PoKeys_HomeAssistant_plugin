@@ -223,7 +223,7 @@ class PoKeys57E(BinarySensorEntity):
     async def async_update(self):
         
         pin = self._pin
-        self._state = pokeys.inputs[int(pin)-1]
+        self._state = pk.inputs[int(pin)-1]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
@@ -292,7 +292,7 @@ class BinarySensorEntity(Entity):
         """Return true if the binary sensor is on."""
         
         pin = self._pin
-        if pokeys.inputs[int(pin)-1]:
+        if pk.inputs[int(pin)-1]:
             return self._attr_is_on
         return self._state
 

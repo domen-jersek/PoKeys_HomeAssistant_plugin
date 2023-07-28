@@ -54,8 +54,7 @@ from typing import TypedDict
 from homeassistant.core import HomeAssistant
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
-import asyncio
-from .button import inputs_updated
+
 
 pk = pokeys_interface()
 
@@ -102,6 +101,9 @@ CONFIG_SCHEMA = vol.Schema(
 
 _LOGGER = logging.getLogger("pokeys")
 
+inputs_updated = threading.Event()
+
+
 def send_notification(hass: HomeAssistant, message):
     create(hass, message, "New PoKeys device discovered")     
 
@@ -114,19 +116,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     devices = []
     
     entry = config[DOMAIN]#config[DOMAIN]
+    hass.data["inputs_updated"] = inputs_updated
     
-    global buttons
-    global switches
-    global sensors
     buttons = []
     switches = []
     sensors = []
     binary_sensors = []
+    hass.data["buttons"] = buttons
+    hass.data["switches"] = switches
+    hass.data["sensors"] = sensors
 
     for device_config in entry["devices"]: #entry.data["devices"]
         name = device_config["name"]
         serial = device_config["serial"]
         host = pk.device_discovery(serial)
+        
         if pk.connect(host):
             try:
                 for entity_config in device_config["buttons"]:
@@ -166,6 +170,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_sensor = entity_config["name"]
                     type_sensor = entity_config["id"]
 
+                    
                     entity_sensor = [name_sensor, serial, type_sensor]
                     sensors.append(entity_sensor)
 
@@ -173,12 +178,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             except:
                 pass
             
-            if (len(entity_sensor) > 0):
-                pk.sensor_setup(0)
-
             async_track_time_interval(hass, read_inputs_update_cycle, timedelta(seconds=1))
+            
+            try:
+                if (len(entity_sensor) > 0):
+                        pk.sensor_setup(0)
+            except:
+                pass        
+
+            
             #read_inputs_thread = threading.Thread(target=read_inputs_update_cycle)
             #read_inputs_thread.start()
+            
+            #state_check_thread = threading.Thread(target=is_device_alive, args=serial)
+            #state_check_thread.start()
+            #if state_check_thread.run():
+            #    pass
+            #else:
+            #    pass
         
         else:
             logging.error("Device " + serial + " not avalible")
@@ -194,22 +211,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         
     return True
 
-global new_inputs
-new_inputs = threading.Event()
     
 def read_inputs_update_cycle(self):
-    #new_inputs.wait()
-    
+        
     pk.read_inputs()
-    global inputs
-    inputs = pk.inputs
     inputs_updated.set()
-    
     inputs_updated.clear()
     
-    #new_inputs.wait()
-    
-        
+def is_device_alive(serial):
+    host = pk.device_discovery(serial)
+    if pk.connect(host):
+        return True
+    else:
+        return False
+    time.sleep(2)
 
 async def async_setup_platform_binary_sensor(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallback, binary_sensor, discovery_info=None) -> bool:
     await EntityPlatform(hass=hass, logger=_LOGGER, domain="binary_sensor", platform_name="pokeys", platform=pokeys, scan_interval=timedelta(seconds=8), entity_namespace=None).async_add_entities([PoKeys57E_binary_sensor(hass, binary_sensor[0], binary_sensor[1], binary_sensor[2])]) 
