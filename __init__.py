@@ -55,7 +55,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
 import asyncio
-from .button import mutex
+from .button import inputs_updated
 
 pk = pokeys_interface()
 
@@ -162,6 +162,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 pass
             try:
                 for entity_config in device_config["sensors"]:
+                    
                     name_sensor = entity_config["name"]
                     type_sensor = entity_config["id"]
 
@@ -172,6 +173,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             except:
                 pass
             
+            if (len(entity_sensor) > 0):
+                pk.sensor_setup(0)
+
             async_track_time_interval(hass, read_inputs_update_cycle, timedelta(seconds=1))
             #read_inputs_thread = threading.Thread(target=read_inputs_update_cycle)
             #read_inputs_thread.start()
@@ -190,16 +194,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         
     return True
 
+global new_inputs
+new_inputs = threading.Event()
     
 def read_inputs_update_cycle(self):
+    #new_inputs.wait()
     
     pk.read_inputs()
     global inputs
     inputs = pk.inputs
+    inputs_updated.set()
     
-    if mutex.locked():
-        logging.error(time.time())
-        mutex.release()
+    inputs_updated.clear()
+    
+    #new_inputs.wait()
     
         
 
