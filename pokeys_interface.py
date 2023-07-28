@@ -129,12 +129,7 @@ class pokeys_interface():
         
         pinmode = list(resp[3:5])
         res = pinmode[0]
-        '''if pinmode[0] == 2:
-            print("input")
-            res = 0
-        elif pinmode[0] == 4:
-            print("output")
-            res = 1'''
+
         return res
 
     def get_input(self, pin):
@@ -170,12 +165,9 @@ class pokeys_interface():
         host = pk.device_discovery(serial)
         pk.connect(host)
         i = int(id)
-        setup = binascii.hexlify(pk.sensor_setup(i))
-        read = binascii.hexlify(pk.read_sensor_values(i))
-        config = re.findall('..', setup.decode())
-        valPacket = re.findall('..', read.decode())
-        sensorType = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[8]
-        readingID = (re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode()))[9]
+        
+        #config = re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())
+        valPacket = re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode())
         val_hex = str(valPacket[9])+str(valPacket[8])
         val = int(val_hex, base=16)/100
         return val
