@@ -115,9 +115,9 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts):
 
         inputs = pk.inputs 
         hass.data["inputs"] = inputs
-
-        inputs_updated.set()
-        inputs_updated.clear()
+        if inputs != None:
+            inputs_updated.set()
+            inputs_updated.clear()
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
