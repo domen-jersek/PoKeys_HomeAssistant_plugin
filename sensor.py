@@ -130,7 +130,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
     )
 
-    sensors = pokeys.sensors
+    sensors = hass.data.get("sensors", None)
     platform_run = True
 
     try:
@@ -225,15 +225,13 @@ class PoKeys57E(SensorEntity):
 
     def __init__(self, hass, name, serial, id):
         self._serial = serial
-        host = pk.device_discovery(serial)
-        self._sensor = pokeys_instance(host)
+        self._host = pk.device_discovery(self._serial)
+        self._sensor = pokeys_instance(self._host)
         self._hass = hass
         
         self._name = name
         self._id = id
         self._attr_state_class = STATE_CLASS_MEASUREMENT
-        pk.connect(host)
-
         
     @callback
     def add_to_platform_start(
@@ -318,7 +316,7 @@ class PoKeys57E(SensorEntity):
     async def async_update(self):
         """Update the sensor value."""
         # Implement your logic to retrieve or calculate the sensor value
-        
+        pk.connect(self._host)
         self._state = pk.sensor_readout(self._serial, self._id)
         #self._state = 42
         return self._state
@@ -466,6 +464,7 @@ class PoKeys57E(SensorEntity):
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
+        pk.connect(self._host)
         self._attr_native_value = pk.sensor_readout(self._serial, self._id)
         return self._attr_native_value
 
@@ -546,6 +545,7 @@ class PoKeys57E(SensorEntity):
         native_unit_of_measurement = self.native_unit_of_measurement
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
+        pk.connect(self._host)
         value = pk.sensor_readout(self._serial, self._id)
         # For the sake of validation, we can ignore custom device classes
         # (customization and legacy style translations)
@@ -968,6 +968,7 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
         return sensor_options.get("suggested_display_precision")
 
     value = state.state
+    pk.connect(self._host)
     value = pk.sensor_readout(self._serial, self._id)
     if (precision := display_precision()) is None:
         return value

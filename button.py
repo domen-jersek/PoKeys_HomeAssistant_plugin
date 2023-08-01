@@ -140,19 +140,20 @@ class PoKeys57E(ButtonEntity):
     def __init__(self, hass, name, serial, pin, delay):
         """Initialize the button entity."""
         self._serial = serial
-        host = pk.device_discovery(serial)
-        self._button = pokeys_instance(host)
+        self._host = pk.device_discovery(self._serial)
+        self._button = pokeys_instance(self._host)
 
         self._hass = hass
         self._name = name
         self._pin = pin
         self._delay = delay
+        
         self._state = "released"
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
-        pk.connect(host)
-        pk.set_pin_function(int(self._pin)-1, 4)
-        pk.set_output(int(self._pin)-1, 0)
+        self._inputs = self._hass.data.get("inputs", None)
+        self._devices = self._hass.data.get("devices", None)
         
+        #self._host_holder = self._hass.data["host_holder"]
         
 
     @property
@@ -173,6 +174,10 @@ class PoKeys57E(ButtonEntity):
     
     async def async_added_to_hass(self):
         """Perform any actions when the button entity is added to Home Assistant."""
+        
+        pk.connect(self._host)
+        pk.set_pin_function(int(self._pin)-1, 4)
+        pk.set_output(int(self._pin)-1, 0)
         _LOGGER.info("Custom button entity added to Home Assistant.")
         
 
@@ -186,24 +191,22 @@ class PoKeys57E(ButtonEntity):
         _LOGGER.info("Custom button pressed.")
         pin = self._pin
         delay =self._delay
-
-
-        pk.set_output(int(pin)-1, 1)
-        self._inputs_updated.wait()
-        if pk.inputs[int(self._pin)-1]:
-            self._state = "pressed"
-            #logging.error("pressed state")
+        pk.connect(self._host)
         
+        pk.set_output(int(pin)-1, 1)
+        self._inputs_updated.wait(timeout=None)
+        if self._inputs[int(self._pin)-1]:
+            self._state = "pressed"
+        #    logging.error("pressed state")
 
         time.sleep(int(delay))
 
         pk.set_output(int(pin)-1, 0)
-        self._inputs_updated.wait()
-        if pk.inputs[int(self._pin)-1] == False:
+        self._inputs_updated.wait(timeout=None)
+        if self._inputs[int(self._pin)-1] == False:
             self._state = "released"
-            #logging.error("relesed state")
-    
-        
+        #    logging.error("relesed state")
+        #pk.disconnect()
         _LOGGER.info("Custom button released.")
         
 
@@ -213,7 +216,7 @@ class PoKeys57E(ButtonEntity):
         pk.set_output(int(pin)-1, 0)
         
         self._inputs_updated.wait()
-        if pk.inputs[int(pin)-1] == False:
+        if self._inputs[int(pin)-1] == False:
             self._state = "released" 
             
         
@@ -336,23 +339,22 @@ class ButtonEntity(RestoreEntity):
         _LOGGER.info("Custom button pressed.")
         pin = self._pin
         delay =self._delay
-        logging.error(self._inputs)
+        
         
         
         pk.set_output(int(pin)-1, 1)
         self._inputs_updated.wait()
         if pk.inputs[int(pin)-1]:
             self._state = "pressed"
-            #logging.error("pressedd state")
+        #    logging.error("pressedd state")
                 
         time.sleep(int(delay))
 
         pk.set_output(int(pin)-1, 0)
-        
+                
         self._inputs_updated.wait()
         if pk.inputs[int(pin)-1] == False:
             self._state = "released"
-            #logging.error("relesed state")
-        
+        #    logging.error("relesed state")
         
         _LOGGER.info("Custom button released.")

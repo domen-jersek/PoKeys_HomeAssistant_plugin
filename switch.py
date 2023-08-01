@@ -125,16 +125,16 @@ class PoKeys57E(SwitchEntity):
 
     def __init__(self, hass, name, serial, pin): 
         self._serial = serial
-        host = pk.device_discovery(serial)
-        self._switch = pokeys_instance(host)
+        self._host = pk.device_discovery(self._serial)
+        self._switch = pokeys_instance(self._host)
 
         self._hass = hass
         self._name = name  
         self._pin = pin
         self._state = None
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
-        
-        pk.connect(host)
+        self._inputs = self._hass.data.get("inputs", None)
+        pk.connect(self._host)
         pk.set_pin_function(int(pin)-1, 4)
 
     @property
@@ -147,9 +147,10 @@ class PoKeys57E(SwitchEntity):
     
     def turn_on(self): 
         pin = self._pin
+        pk.connect(self._host)
         pk.set_output(int(pin)-1, 1)
         self._inputs_updated.wait()
-        if pk.inputs[int(pin)-1]:
+        if self._inputs[int(pin)-1]:
             self._state = True
         
         self.schedule_update_ha_state()
@@ -157,9 +158,10 @@ class PoKeys57E(SwitchEntity):
 
     def turn_off(self):#, **kwargs
         pin = self._pin
+        pk.connect(self._host)
         pk.set_output(int(pin)-1, 0)
         self._inputs_updated.wait()
-        if pk.inputs[int(pin)-1] == False:
+        if self._inputs[int(pin)-1] == False:
             self._state = False
         self.schedule_update_ha_state()
 
@@ -189,8 +191,8 @@ class SwitchEntity(ToggleEntity):
 
     def __init__(self, hass, name, serial, pin): 
         self._serial = serial
-        host = pk.device_discovery(serial)
-        self._switch = pokeys_instance(host)
+        self._host = pk.device_discovery(serial)
+        self._switch = pokeys_instance(self._host)
 
         self._hass = hass
         self._name = name  
@@ -198,7 +200,7 @@ class SwitchEntity(ToggleEntity):
         self._state = None
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         
-        pk.connect(host)
+        pk.connect(self._host)
         pk.set_pin_function(int(pin)-1, 4)
 
     @property
@@ -211,6 +213,7 @@ class SwitchEntity(ToggleEntity):
     
     def turn_on(self): 
         pin = self._pin
+        pk.connect(self._host)
         pk.set_output(int(pin)-1, 1)
         self._inputs_updated.wait()
         if pk.inputs[int(pin)-1]:
@@ -220,6 +223,7 @@ class SwitchEntity(ToggleEntity):
 
     def turn_off(self):
         pin = self._pin
+        pk.connect(self._host)
         pk.set_output(int(pin)-1, 0)
         self._inputs_updated.wait()
         if pk.inputs[int(pin)-1] == False:
