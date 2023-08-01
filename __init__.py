@@ -99,6 +99,7 @@ CONFIG_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger("pokeys")
 
 inputs_updated = threading.Event()
+send_recive = threading.Event()
 
 
 def send_notification(hass: HomeAssistant, message):
@@ -126,6 +127,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     
     devices = []
     hass.data["devices"] = devices
+    hass.data["send_recive"] = send_recive
     
     entry = config[DOMAIN]#config[DOMAIN]
     hass.data["inputs_updated"] = inputs_updated
@@ -197,7 +199,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         
             try:
                 if (len(entity_sensor) > 0):
-                        pk.sensor_setup(0)
+                        send_recive.set()
+                        if pk.sensor_setup(hass, 0):
+                            _LOGGER.info("Sensors set up")
+                            logging.error("sernsor set up")
+                            send_recive.clear()
+                        else:
+                            logging.error("Sensors set up failed")
             except:
                 pass        
         

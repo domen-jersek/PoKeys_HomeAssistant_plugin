@@ -232,6 +232,7 @@ class PoKeys57E(SensorEntity):
         self._name = name
         self._id = id
         self._attr_state_class = STATE_CLASS_MEASUREMENT
+        self._send_recive = self._hass.data.get("send_recive", None)
         
     @callback
     def add_to_platform_start(
@@ -317,7 +318,12 @@ class PoKeys57E(SensorEntity):
         """Update the sensor value."""
         # Implement your logic to retrieve or calculate the sensor value
         pk.connect(self._host)
-        self._state = pk.sensor_readout(self._serial, self._id)
+        
+        self._state = pk.sensor_readout(self._hass, self._host, self._id)
+        if self._send_recive == False:
+            self._send_recive.set()
+        
+        self._send_recive.clear()
         #self._state = 42
         return self._state
 
@@ -465,7 +471,13 @@ class PoKeys57E(SensorEntity):
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         pk.connect(self._host)
-        self._attr_native_value = pk.sensor_readout(self._serial, self._id)
+   
+        self._attr_native_value = pk.sensor_readout(self._hass, self._host, self._id)
+        if self._send_recive == False:
+            self._send_recive.set()
+        
+        self._send_recive.clear()
+        
         return self._attr_native_value
 
     @property
@@ -546,7 +558,13 @@ class PoKeys57E(SensorEntity):
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
         pk.connect(self._host)
-        value = pk.sensor_readout(self._serial, self._id)
+     
+        value = pk.sensor_readout(self._hass, self._host, self._id)
+        if self._send_recive == False:
+            self._send_recive.set()
+        
+        self._send_recive.clear()
+        
         # For the sake of validation, we can ignore custom device classes
         # (customization and legacy style translations)
         device_class = try_parse_enum(SensorDeviceClass, self.device_class)
@@ -969,7 +987,13 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
 
     value = state.state
     pk.connect(self._host)
-    value = pk.sensor_readout(self._serial, self._id)
+
+    value = pk.sensor_readout(self._hass, self._host, self._id)
+    if self._send_recive == False:
+        self._send_recive.set()
+    
+    self._send_recive.clear()
+    
     if (precision := display_precision()) is None:
         return value
 

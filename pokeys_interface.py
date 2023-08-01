@@ -1,3 +1,4 @@
+from __future__ import annotations
 from operator import mod
 import socket
 import ipaddress
@@ -7,6 +8,11 @@ import netifaces
 import binascii
 import re
 import logging
+import threading
+#from dataclasses import dataclass
+#from homeassistant.core import HomeAssistant
+#import homeassistant
+
 
 class pokeys_interface():
     def __init__(self):
@@ -26,11 +32,12 @@ class pokeys_interface():
     def connect(self, address):
         if address == None:
             return False
-        print("Connecting to " + address)
+        #print("Connecting to " + address)
         self.client_pk.connect((address, self.POKEYS_PORT_COM))
         self.client_pk.settimeout(1)
         self.connected = True
-        return self.read_inputs()
+        return self.connected
+        #return self.read_inputs()
 
     def disconnect(self):
         self.client.close()
@@ -95,6 +102,9 @@ class pokeys_interface():
                 for i in range(55):
                     self.inputs[i] = (resp[8 + int(i / 8)] & (1 << (mod(i, 8)))) > 0
                 return True
+                #reading(HomeAssistant)
+                #inputs_read.set()
+                #inputs_read.clear()
             except:
                 return False
             
@@ -129,7 +139,12 @@ class pokeys_interface():
         
         pinmode = list(resp[3:5])
         res = pinmode[0]
-
+        '''if pinmode[0] == 2:
+            print("input")
+            res = 0
+        elif pinmode[0] == 4:
+            print("output")
+            res = 1'''
         return res
 
     def get_input(self, pin):
@@ -148,26 +163,29 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, [0x40]))
         return self.get_input(pin)
 
-    def sensor_setup(self,i):
+    def sensor_setup(self, hass, i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
-    
+        send_recive = hass.data.get("send_recive", None)
         resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, []))
+        send_recive.wait()
         return resp
 
-    def read_sensor_values(self,i):
-    
+    def read_sensor_values(self,hass, i):
+        #send_recive = hass.data.get("send_recive", None)
         resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [])) #, 0, 1, 0, []
+        #send_recive.wait()
         return resp
     
     
-    def sensor_readout(self, serial, id):
+    def sensor_readout(self, hass, host, id):
         pk = pokeys_interface()
-        host = pk.device_discovery(serial)
+        #host = pk.device_discovery(serial)
         pk.connect(host)
         i = int(id)
         
         #config = re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())
-        valPacket = re.findall('..', binascii.hexlify(pk.read_sensor_values(i)).decode())
+        packet = pk.read_sensor_values(hass, i)
+        valPacket = re.findall('..', binascii.hexlify(packet).decode())
         val_hex = str(valPacket[9])+str(valPacket[8])
         val = int(val_hex, base=16)/100
         return val
