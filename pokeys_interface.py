@@ -210,10 +210,7 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
-        
-        #req_mutex.clear()
-        #req_mutex.release()
-        send_recive.wait()
+    
         return resp
 
     def read_sensor_values(self,hass, i):
@@ -222,9 +219,6 @@ class pokeys_interface():
         if req_mutex.locked():
             req_mutex.release()
         
-        #req_mutex.clear()
-        #req_mutex.release()
-        #send_recive.wait()
         return resp
     
     
