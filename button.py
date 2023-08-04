@@ -41,7 +41,7 @@ from .pokeys_interface import pokeys_interface
 
 CONF_SERIAL = "serial"
 CONF_DELAY = "delay"
-DOMAIN = "PoKeys57E"
+DOMAIN = "pokeys"
 
 SCAN_INTERVAL = timedelta(seconds=1)
 SERVICE_PRESS = "press"
@@ -97,25 +97,26 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         platform_run = False
     except:
         pass
-    
-    if platform_run:
-        for button in buttons:
-            button = {
-                "name": button[0],
-                "serial": button[1],
-                "pin": button[2],
-                "delay": button[3],
-            }
-            async_add_entities([
-                PoKeys57E(
-                    hass,
-                    button["name"],
-                    button["serial"],
-                    button["pin"],
-                    button["delay"]
-                )
-            ])
-    
+    try:
+        if platform_run:
+            for button in buttons:
+                button = {
+                    "name": button[0],
+                    "serial": button[1],
+                    "pin": button[2],
+                    "delay": button[3],
+                }
+                async_add_entities([
+                    PoKeys57E(
+                        hass,
+                        button["name"],
+                        button["serial"],
+                        button["pin"],
+                        button["delay"]
+                    )
+                ])
+    except:
+        pass    
         
 
     await component.async_setup(config)
@@ -151,7 +152,10 @@ class PoKeys57E(ButtonEntity):
         self._state = "released"
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         self._inputs = self._hass.data.get("inputs", None)
-        self._devices = self._hass.data.get("devices", None)
+        self._hosts = self._hass.data.get("hosts", None)
+        self._host_cycle = self._hass.data.get("host_cycle", None)
+        
+        #self._devices = self._hass.data.get("devices", None)
         
         #self._host_holder = self._hass.data["host_holder"]
         
@@ -178,6 +182,9 @@ class PoKeys57E(ButtonEntity):
         pk.connect(self._host)
         pk.set_pin_function(int(self._pin)-1, 4)
         pk.set_output(int(self._pin)-1, 0)
+        #logging.error(self._name)
+        #logging.error(self._hosts.index(self._host))
+
         _LOGGER.info("Custom button entity added to Home Assistant.")
         
 
@@ -194,19 +201,28 @@ class PoKeys57E(ButtonEntity):
         pk.connect(self._host)
         
         pk.set_output(int(pin)-1, 1)
+        
         self._inputs_updated.wait(timeout=None)
-        if self._inputs[int(self._pin)-1]:
+        while self._hass.data.get("host_cycle", None) != self._host:
+            pass
+        
+        if self._inputs[self._hosts.index(self._host)][int(self._pin)-1]:
             self._state = "pressed"
-        #    logging.error("pressed state")
-
+    #        logging.error("pressed state")
+    
+        
         time.sleep(int(delay))
 
         pk.set_output(int(pin)-1, 0)
+        
         self._inputs_updated.wait(timeout=None)
-        if self._inputs[int(self._pin)-1] == False:
+        while self._hass.data.get("host_cycle", None) != self._host:
+            pass
+        
+        if self._inputs[self._hosts.index(self._host)][int(self._pin)-1] == False:
             self._state = "released"
-        #    logging.error("relesed state")
-        #pk.disconnect()
+    #        logging.error("relesed state")
+    #pk.disconnect()
         _LOGGER.info("Custom button released.")
         
 
@@ -216,7 +232,7 @@ class PoKeys57E(ButtonEntity):
         pk.set_output(int(pin)-1, 0)
         
         self._inputs_updated.wait()
-        if self._inputs[int(pin)-1] == False:
+        if self._inputs[self._hosts_index][int(pin)-1] == False:
             self._state = "released" 
             
         
@@ -276,6 +292,7 @@ class ButtonEntity(RestoreEntity):
         self._state = "released"
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         self._inputs = self._hass.data.get("inputs", None)
+        self._hosts_index = self._hass.data.get("host_index", None)
         pk.connect(host)
         pk.set_pin_function(int(self._pin)-1, 4)
         pk.set_output(int(pin)-1, 0)
@@ -344,7 +361,9 @@ class ButtonEntity(RestoreEntity):
         
         pk.set_output(int(pin)-1, 1)
         self._inputs_updated.wait()
-        if pk.inputs[int(pin)-1]:
+        #while self._host_cycle != self._host:
+        #    pass
+        if self._inputs[self._hosts_index][int(pin)-1]:
             self._state = "pressed"
         #    logging.error("pressedd state")
                 
@@ -353,7 +372,9 @@ class ButtonEntity(RestoreEntity):
         pk.set_output(int(pin)-1, 0)
                 
         self._inputs_updated.wait()
-        if pk.inputs[int(pin)-1] == False:
+#        while self._host_cycle != self._host:
+#            pass
+        if self._inputs[self._hosts_index][int(pin)-1] == False:
             self._state = "released"
         #    logging.error("relesed state")
         

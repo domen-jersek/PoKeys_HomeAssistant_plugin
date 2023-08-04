@@ -38,8 +38,8 @@ pk = pokeys_interface()
 
 _LOGGER = logging.getLogger("pokeys")
 
-DOMAIN = "PoKeys57E"
-SCAN_INTERVAL = timedelta(seconds=4)
+DOMAIN = "pokeys"
+SCAN_INTERVAL = timedelta(seconds=5)
 CONF_SERIAL = "serial"
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
@@ -202,22 +202,24 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     except:
         pass
     
-    if platform_run:
-        for binary_sensor in binary_sensors:
-            binary_sensor = {
-                "name": binary_sensor[0],
-                "serial": binary_sensor[1],
-                "pin": binary_sensor[2],
-            }
-            async_add_entities([
-                PoKeys57E(
-                    hass,
-                    binary_sensor["name"],
-                    binary_sensor["serial"],
-                    binary_sensor["pin"]
-                )
-            ])
-
+    try:
+        if platform_run:
+            for binary_sensor in binary_sensors:
+                binary_sensor = {
+                    "name": binary_sensor[0],
+                    "serial": binary_sensor[1],
+                    "pin": binary_sensor[2],
+                }
+                async_add_entities([
+                    PoKeys57E(
+                        hass,
+                        binary_sensor["name"],
+                        binary_sensor["serial"],
+                        binary_sensor["pin"]
+                    )
+                ])
+    except:
+        pass
 
     _LOGGER.info(pformat(config))
     await component.async_setup(config)
@@ -235,7 +237,9 @@ class PoKeys57E(BinarySensorEntity):
         self._pin = pin
         self._state = False
         self._inputs = self._hass.data.get("inputs", None)
-        
+        self._hosts = self._hass.data.get("hosts", None)
+        self._inputs_updated = self._hass.data.get("inputs_updated", None)
+
         pk.connect(self._host)
         pk.set_pin_function(int(self._pin)-1, 2)
         
@@ -251,7 +255,11 @@ class PoKeys57E(BinarySensorEntity):
     async def async_update(self):
         
         pk.connect(self._host)
-        self._state = self._inputs[int(self._pin)-1]
+
+        #self._inputs_updated.wait(timeout=None)
+        #while self._hass.data.get("host_cycle", None) != self._host:
+        #    pass
+        self._state = self._inputs[self._hosts.index(self._host)][int(self._pin)-1]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
@@ -296,6 +304,8 @@ class BinarySensorEntity(Entity):
         self._pin = pin
         self._state = False
         self._inputs = self._hass.data.get("inputs", None)
+        self._hosts = self._hass.data.get("hosts", None)
+        self._inputs_updated = self._hass.data.get("inputs_updated", None)
         pk.connect(self._host)
         pk.set_pin_function(int(self._pin)-1, 2)
 
@@ -322,7 +332,10 @@ class BinarySensorEntity(Entity):
         
         pin = self._pin
         pk.connect(self._host)
-        if self._inputs[int(pin)-1]:
+        #self._inputs_updated.wait(timeout=None)
+        #while self._hass.data.get("host_cycle", None) != self._host:
+        #    pass
+        if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
             return self._attr_is_on
         return self._state
 

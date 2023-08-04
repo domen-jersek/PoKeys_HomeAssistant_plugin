@@ -87,7 +87,7 @@ from .websocket_api import async_setup as async_setup_ws_api
 pk = pokeys_interface()
 
 _LOGGER = logging.getLogger("pokeys")
-DOMAIN = "PoKeys57E"
+DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
 CONF_TYPE = "id"
 
@@ -151,22 +151,24 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     except:
         pass
     
-    if platform_run:
-        for sensor in sensors:
-            sensor = {
-                "name": sensor[0],
-                "serial": sensor[1],
-                "pin": sensor[2],
-            }
-            async_add_entities([
-                PoKeys57E(
-                    hass,
-                    sensor["name"],
-                    sensor["serial"],
-                    sensor["pin"]
-                )
-            ])
-
+    try:
+        if platform_run:
+            for sensor in sensors:
+                sensor = {
+                    "name": sensor[0],
+                    "serial": sensor[1],
+                    "pin": sensor[2],
+                }
+                async_add_entities([
+                    PoKeys57E(
+                        hass,
+                        sensor["name"],
+                        sensor["serial"],
+                        sensor["pin"]
+                    )
+                ])
+    except:
+        pass
 
     async_setup_ws_api(hass)
     _LOGGER.info(pformat(config))

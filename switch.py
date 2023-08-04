@@ -42,7 +42,7 @@ ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
 pk = pokeys_interface()
 
-DOMAIN = "PoKeys57E"
+DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
 CONF_DEVICE = "device"
 
@@ -93,22 +93,24 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     except:
         pass
     
-    if platform_run:
-        for switch in switches:
-            switch = {
-                "name": switch[0],
-                "serial": switch[1],
-                "pin": switch[2],
-            }
-            async_add_entities([
-                PoKeys57E(
-                    hass,
-                    switch["name"],
-                    switch["serial"],
-                    switch["pin"]
-                )
-            ])
-
+    try:
+        if platform_run:
+            for switch in switches:
+                switch = {
+                    "name": switch[0],
+                    "serial": switch[1],
+                    "pin": switch[2],
+                }
+                async_add_entities([
+                    PoKeys57E(
+                        hass,
+                        switch["name"],
+                        switch["serial"],
+                        switch["pin"]
+                    )
+                ])
+    except:
+        pass
     
     await component.async_setup(config)
 
@@ -134,6 +136,8 @@ class PoKeys57E(SwitchEntity):
         self._state = None
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         self._inputs = self._hass.data.get("inputs", None)
+        
+        self._hosts = self._hass.data.get("hosts", None)
         pk.connect(self._host)
         pk.set_pin_function(int(pin)-1, 4)
 
@@ -149,8 +153,12 @@ class PoKeys57E(SwitchEntity):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 1)
-        self._inputs_updated.wait()
-        if self._inputs[int(pin)-1]:
+        
+        self._inputs_updated.wait(timeout=None)
+        while self._hass.data.get("host_cycle", None) != self._host:
+            pass
+        
+        if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
             self._state = True
         
         self.schedule_update_ha_state()
@@ -160,8 +168,12 @@ class PoKeys57E(SwitchEntity):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 0)
-        self._inputs_updated.wait()
-        if self._inputs[int(pin)-1] == False:
+        
+        self._inputs_updated.wait(timeout=None)
+        while self._hass.data.get("host_cycle", None) != self._host:
+            pass
+        
+        if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
             self._state = False
         self.schedule_update_ha_state()
 
@@ -199,7 +211,9 @@ class SwitchEntity(ToggleEntity):
         self._pin = pin
         self._state = None
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
+        self._inputs = self._hass.data.get("inputs", None)
         
+        self._hosts = self._hass.data.get("hosts", None)
         pk.connect(self._host)
         pk.set_pin_function(int(pin)-1, 4)
 
@@ -215,8 +229,12 @@ class SwitchEntity(ToggleEntity):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 1)
-        self._inputs_updated.wait()
-        if pk.inputs[int(pin)-1]:
+        
+        self._inputs_updated.wait(timeout=None)
+        while self._hass.data.get("host_cycle", None) != self._host:
+            pass
+        
+        if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
             self._state = True
         self.schedule_update_ha_state()
 
@@ -225,8 +243,12 @@ class SwitchEntity(ToggleEntity):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 0)
-        self._inputs_updated.wait()
-        if pk.inputs[int(pin)-1] == False:
+        
+        self._inputs_updated.wait(timeout=None)
+        while self._hass.data.get("host_cycle", None) != self._host:
+            pass
+        
+        if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
             self._state = False
         self.schedule_update_ha_state()
 

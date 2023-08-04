@@ -1,4 +1,4 @@
-'''pokeys57e integration'''
+'''pokeys integration'''
 from __future__ import annotations
 import asyncio
 import voluptuous as vol
@@ -106,18 +106,84 @@ def send_notification(hass: HomeAssistant, message):
     create(hass, message, "New PoKeys device discovered")     
 
 
-def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts):
+def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
 
     for host in hosts:
+        #logging.error(hosts.index(host))
+        
         pk.connect(host)
 
         pk.read_inputs()
 
-        inputs = pk.inputs 
-        hass.data["inputs"] = inputs
+        inputs =pk.inputs 
+        
+        #logging.error(host)
+        #logging.error(inputs)
+        ind = hosts.index(host)
+        inputs_hosts[ind] = inputs.copy()
+
+        hass.data["inputs"] = inputs_hosts
+        hass.data["hosts"] = hosts
+        hass.data["host_cycle"] = host
+        
+        
+        #inputs_hosts[hosts.index(host)] = inputs
+        #logging.error(inputs_hosts)
+                #if ind == hosts.index(host):
+    #    if len(inputs_hosts[host])==0:
+    #        inputs_hosts[host].append(inputs)
+    #    else:
+    #        inputs_hosts[host][0] = inputs
+        #if inputs_hosts[host] == host
+    #      logging.error(hosts.index(host))
+    #      logging.error(inputs)
+        #if len(inputs_hosts)<len(hosts):
+            
+        #inputs_hosts[ind].append(inputs)
+        #else:
+        #inputs_hosts = inputs_hosts[:ind]+[inputs]+inputs_hosts[ind+1:]
+        
+        #if len(inputs_hosts[host])==0:
+        
+        #    inputs_hosts[str(host)].append(inputs)
+        #else:
+
+        #    inputs_hosts[str(host)] = inputs
+        #inputs_hosts[host].append(inputs)
+        #inputs_hosts[str(host)] = inputs #[hosts.index(host)]
+       # logging.error(host)
+    #    logging.error(ind)
+       # logging.error(hosts.index(host))
+    #    logging.error(inputs_hosts[host])
+       # logging.error(inputs_hosts)
+        
+        #logging.error(inputs_hosts[str(host)][0])
+        #logging.error(inputs_hosts["192.168.1.177"])
+        #inputs_hosts[hosts].remove(inputs)
+        #other_host = hosts[hosts.index(host)-1]
+        #if len(inputs_hosts[str(host)]) != 0:
+  #      logging.error(hosts[hosts.index(host)-1])
+        #pk.connect(hosts[hosts.index(host)-1])
         if inputs != None:
             inputs_updated.set()
             inputs_updated.clear()
+        #inputs_hosts[ind].remove(inputs)
+        
+
+"""def read_sensor_cycle(hass: HomeAssistant, devices, sensors, serial, sensors_list, id_list):
+    
+    for host in devices:
+        if serial in sensors:
+        for id in id_list:
+            if len(id_list)>len(sensors_list):
+                val = pk.sensor_readout(hass, host, id)
+                sensors_list.append(val)
+                logging.error(sensors_list)
+            else:
+                val = pk.sensor_readout(hass, host, id)
+                sensors_list[id] = val
+                logging.error(sensors_list)
+"""
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -129,9 +195,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data["devices"] = devices
     hass.data["send_recive"] = send_recive
     
-    entry = config[DOMAIN]#config[DOMAIN]
+    entry = config[DOMAIN]
     hass.data["inputs_updated"] = inputs_updated
-    
+
+    inputs_hosts = []    
+
     buttons = []
     switches = []
     sensors = []
@@ -141,7 +209,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data["sensors"] = sensors
     hass.data["binary_sensors"] = binary_sensors
     
-    for device_config in entry["devices"]: #entry.data["devices"]
+    for device_config in entry["devices"]: 
         name = device_config["name"]
         serial = device_config["serial"]
         host = pk.device_discovery(serial)
@@ -152,6 +220,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if pk.connect(host):
 
             devices.append(host)
+            host_inputs = []
+            #inputs_hosts["{0}".format(host)] = host_inputs
+            inputs_hosts.append(host_inputs)
 
             try:
                 for entity_config in device_config["buttons"]:
@@ -189,7 +260,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     
                     name_sensor = entity_config["name"]
                     type_sensor = entity_config["id"]
-
+                
+                    #id_list.append(int(type_sensor))
                     
                     entity_sensor = [name_sensor, serial, type_sensor]
                     sensors.append(entity_sensor)
@@ -202,7 +274,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                         send_recive.set()
                         if pk.sensor_setup(hass, 0):
                             _LOGGER.info("Sensors set up")
-                            logging.error("sernsor set up")
+                            #logging.error("sensor set up")
                             send_recive.clear()
                         else:
                             logging.error("Sensors set up failed")
@@ -211,14 +283,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         
         else:
             logging.error("Device " + serial + " not avalible")
-
-
-        read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices)
-        #read_inputs_update_cycle_dict["read_inputs_update_cycle_callback_" + str(serial)]
-        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))
-        #logging.error(read_inputs_update_cycle_dict)
-        logging.error(devices)
         
+        
+        #if len(sensors)>0:
+        #    read_sensor_cycle_callback = lambda now: read_sensor_cycle(hass, devices=devices, serial=serial, sensors=sensors, sensors_list=sensors_list, id_list=id_list)
+        #    async_track_time_interval(hass, read_sensor_cycle_callback, timedelta(seconds=1))
+
+
+    read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts)
+    #read_inputs_update_cycle_dict["read_inputs_update_cycle_callback_" + str(serial)]
+    async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=2))
+
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
