@@ -8,6 +8,7 @@ import netifaces
 import binascii
 import re
 import threading
+import logging
 
 req_mutex = threading.Lock()
 
@@ -294,7 +295,7 @@ class pokeys_interface():
                 pass 
 
     def new_device_notify(self):
-        
+        device_list = []
         broadcast_address = '<broadcast>'
         port = 20055
         message = b'Discovery request'
@@ -319,13 +320,16 @@ class pokeys_interface():
                                 data, address = udp_socket.recvfrom(1024)
                                 serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
                                 serial_num_dec = int(serial_num_hex, 16)
-                                return serial_num_dec
+                                device_list.append(serial_num_dec)
+                                #logging.error(serial_num_dec)
+                                #return serial_num_dec
                             except socket.timeout:
                                 break
-                        udp_socket.close()          
+                        udp_socket.close()
+                        #logging.error(device_list)
             except ValueError:
                 pass 
-            
+        return device_list
 
 #if __name__ == "__main__":
     # Test the interface

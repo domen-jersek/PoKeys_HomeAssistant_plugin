@@ -212,7 +212,7 @@ class PoKeys57E(ButtonEntity):
     
         
         time.sleep(int(delay))
-
+        pk.connect(self._host)
         pk.set_output(int(pin)-1, 0)
         
         self._inputs_updated.wait(timeout=None)

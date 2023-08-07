@@ -108,7 +108,7 @@ def send_notification(hass: HomeAssistant, message):
 
 def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
 
-    for host in hosts:
+    for host in hosts:#hosts
         #logging.error(hosts.index(host))
         
         pk.connect(host)
@@ -126,48 +126,9 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
         hass.data["hosts"] = hosts
         hass.data["host_cycle"] = host
         
-        
-        #inputs_hosts[hosts.index(host)] = inputs
-        #logging.error(inputs_hosts)
-                #if ind == hosts.index(host):
-    #    if len(inputs_hosts[host])==0:
-    #        inputs_hosts[host].append(inputs)
-    #    else:
-    #        inputs_hosts[host][0] = inputs
-        #if inputs_hosts[host] == host
-    #      logging.error(hosts.index(host))
-    #      logging.error(inputs)
-        #if len(inputs_hosts)<len(hosts):
-            
-        #inputs_hosts[ind].append(inputs)
-        #else:
-        #inputs_hosts = inputs_hosts[:ind]+[inputs]+inputs_hosts[ind+1:]
-        
-        #if len(inputs_hosts[host])==0:
-        
-        #    inputs_hosts[str(host)].append(inputs)
-        #else:
-
-        #    inputs_hosts[str(host)] = inputs
-        #inputs_hosts[host].append(inputs)
-        #inputs_hosts[str(host)] = inputs #[hosts.index(host)]
-       # logging.error(host)
-    #    logging.error(ind)
-       # logging.error(hosts.index(host))
-    #    logging.error(inputs_hosts[host])
-       # logging.error(inputs_hosts)
-        
-        #logging.error(inputs_hosts[str(host)][0])
-        #logging.error(inputs_hosts["192.168.1.177"])
-        #inputs_hosts[hosts].remove(inputs)
-        #other_host = hosts[hosts.index(host)-1]
-        #if len(inputs_hosts[str(host)]) != 0:
-  #      logging.error(hosts[hosts.index(host)-1])
-        #pk.connect(hosts[hosts.index(host)-1])
-        if inputs != None:
+        if pk.connected:
             inputs_updated.set()
             inputs_updated.clear()
-        #inputs_hosts[ind].remove(inputs)
         
 
 """def read_sensor_cycle(hass: HomeAssistant, devices, sensors, serial, sensors_list, id_list):
@@ -199,6 +160,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data["inputs_updated"] = inputs_updated
 
     inputs_hosts = []    
+    serial_list = []
 
     buttons = []
     switches = []
@@ -215,14 +177,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         host = pk.device_discovery(serial)
         inputs = []
 
-        
-
         if pk.connect(host):
 
             devices.append(host)
             host_inputs = []
-            #inputs_hosts["{0}".format(host)] = host_inputs
+            
             inputs_hosts.append(host_inputs)
+            serial_list.append(serial)
 
             try:
                 for entity_config in device_config["buttons"]:
@@ -260,8 +221,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     
                     name_sensor = entity_config["name"]
                     type_sensor = entity_config["id"]
-                
-                    #id_list.append(int(type_sensor))
                     
                     entity_sensor = [name_sensor, serial, type_sensor]
                     sensors.append(entity_sensor)
@@ -274,7 +233,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                         send_recive.set()
                         if pk.sensor_setup(hass, 0):
                             _LOGGER.info("Sensors set up")
-                            #logging.error("sensor set up")
                             send_recive.clear()
                         else:
                             logging.error("Sensors set up failed")
@@ -283,15 +241,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         
         else:
             logging.error("Device " + serial + " not avalible")
-        
-        
-        #if len(sensors)>0:
-        #    read_sensor_cycle_callback = lambda now: read_sensor_cycle(hass, devices=devices, serial=serial, sensors=sensors, sensors_list=sensors_list, id_list=id_list)
-        #    async_track_time_interval(hass, read_sensor_cycle_callback, timedelta(seconds=1))
-
 
     read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts)
-    #read_inputs_update_cycle_dict["read_inputs_update_cycle_callback_" + str(serial)]
     async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=2))
 
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
@@ -300,8 +251,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
 
     if pk.new_device_notify() != None:
-        send_notification(hass, "Discovered PoKeys device with serial number " + str(pk.new_device_notify()))
-        
-    
+        for device in pk.new_device_notify():
+            send_notification(hass, "Discovered PoKeys device with serial number " + str(device))
         
     return True
