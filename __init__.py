@@ -2,67 +2,41 @@
 from __future__ import annotations
 import asyncio
 import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry
 from typing import Any, Protocol, cast
 from dataclasses import dataclass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import entity_component
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_component import *
-from homeassistant.const import CONF_NAME
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.components.button import ButtonEntity
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.components.binary_sensor import BinarySensorEntity
 import logging
-
 from homeassistant.components import button
 from homeassistant.components import switch
 from homeassistant.components import binary_sensor
 from homeassistant.components import sensor
-#from custom_components.pokeys import sensor
-#from custom_components.pokeys import binary_sensor
 from .pokeys import pokeys_instance
 from .pokeys_interface import pokeys_interface
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers import *   
-from homeassistant import loader
-from homeassistant import helpers
-from homeassistant import components
 from pprint import pformat
-import time
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
-from homeassistant.helpers.entity_platform import EntityPlatform
-#from homeassistant.helpers.entity_platform import async_add_entities
+#from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.util import dt as dt_util
-from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from datetime import timedelta
-from homeassistant.helpers.entity import Entity
 import threading
 from typing import TypedDict
-from homeassistant.core import HomeAssistant
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
-from functools import partial
 
 
 pk = pokeys_interface()
 
-
+#keywords in config
 DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
 CONF_PIN = "pin"
 CONF_TYPE = "id"
 
-PLATFORM_POKEYS = "pokeys"
+#PLATFORM_POKEYS = "pokeys"
 
+#each entity list contains name of the entity and the parameters it requiers
 ENTITY_SCHEMA = vol.Schema(
     {
         vol.Required("name"): cv.string,
@@ -72,6 +46,7 @@ ENTITY_SCHEMA = vol.Schema(
     }
 )
 
+#devices schema includes device name, device serial and lists of entities 
 DEVICE_SCHEMA = vol.Schema(
     {
         vol.Optional("name"): cv.string,
@@ -87,7 +62,7 @@ DEVICE_SCHEMA = vol.Schema(
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema(
-            {
+            {#pokeys has one option(devices)
                 vol.Optional("devices"): vol.All(cv.ensure_list, [DEVICE_SCHEMA]),
             }
         )
@@ -98,18 +73,18 @@ CONFIG_SCHEMA = vol.Schema(
 
 _LOGGER = logging.getLogger("pokeys")
 
+#threading event acting as mutex to prevent skipping updated states
 inputs_updated = threading.Event()
-send_recive = threading.Event()
 
 
 def send_notification(hass: HomeAssistant, message):
+    #creates a new notification with title "New PoKeys device discovered"
     create(hass, message, "New PoKeys device discovered")     
 
-
+#this function reads inputs of every pokeys device inside configuration and wirites those inputs to homeassistant
 def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
 
-    for host in hosts:#hosts
-        #logging.error(hosts.index(host))
+    for host in hosts:
         
         pk.connect(host)
 
@@ -117,8 +92,7 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
 
         inputs =pk.inputs 
         
-        #logging.error(host)
-        #logging.error(inputs)
+
         ind = hosts.index(host)
         inputs_hosts[ind] = inputs.copy()
 
@@ -126,6 +100,7 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
         hass.data["hosts"] = hosts
         hass.data["host_cycle"] = host
         
+        #entity actions are blocked if their device is offline
         if pk.connected:
             inputs_updated.set()
             inputs_updated.clear()
@@ -154,8 +129,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     
     devices = []
     hass.data["devices"] = devices
-    hass.data["send_recive"] = send_recive
-    
+        
     entry = config[DOMAIN]
     hass.data["inputs_updated"] = inputs_updated
 
@@ -171,6 +145,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data["sensors"] = sensors
     hass.data["binary_sensors"] = binary_sensors
     
+    #read the configuration tree of devices
     for device_config in entry["devices"]: 
         name = device_config["name"]
         serial = device_config["serial"]
@@ -178,7 +153,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         inputs = []
 
         if pk.connect(host):
-
+            #entity listing that will be passed to entity files for initialization
             devices.append(host)
             host_inputs = []
             
@@ -227,13 +202,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             except:
                 pass
-        
+            
+            #EasySensor setup
             try:
                 if (len(entity_sensor) > 0):
-                        send_recive.set()
                         if pk.sensor_setup(hass, 0):
-                            _LOGGER.info("Sensors set up")
-                            send_recive.clear()
+                            _LOGGER.info("EasySensors set up")
                         else:
                             logging.error("Sensors set up failed")
             except:
@@ -242,14 +216,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             logging.error("Device " + serial + " not avalible")
 
+    #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 2 seconds
     read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts)
     async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=2))
 
+    #load entity platforms
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
 
+    #discovered devices notifications at startup
     if pk.new_device_notify() != None:
         for device in pk.new_device_notify():
             send_notification(hass, "Discovered PoKeys device with serial number " + str(device))
