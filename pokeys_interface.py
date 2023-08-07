@@ -1,4 +1,3 @@
-from __future__ import annotations
 from operator import mod
 import socket
 import ipaddress
@@ -8,7 +7,6 @@ import netifaces
 import binascii
 import re
 import threading
-import logging
 
 req_mutex = threading.Lock()
 
@@ -18,7 +16,6 @@ class pokeys_interface():
         self.connected = False
         
         self.POKEYS_PORT_COM = 20055
-        self.address = "192.168.1.177"       
 
         self.users = []
         self.blinds = dict()
@@ -71,7 +68,6 @@ class pokeys_interface():
                 response = self.client_pk.recv(1024)
                 
                 if response[6] == command[6]:
-                    #req_mutex.wait()
                     #print(f"Response: {response}")
                     return response
         except socket.timeout as t:
@@ -87,10 +83,6 @@ class pokeys_interface():
         if req_mutex.locked():
             req_mutex.release()
         
-        #req_mutex.clear()
-        
-        #req_mutex.release()
-        #req_mutex.clear()
         if resp != None:
             try:
                 return resp[31:41].decode('UTF-8')
@@ -106,18 +98,13 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0xCC, 0, 0, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
-        
-        #req_mutex.clear()
-        #req_mutex.release()
+
         if resp != None:
             try:
                 # Parse the response
                 for i in range(55):
                     self.inputs[i] = (resp[8 + int(i / 8)] & (1 << (mod(i, 8)))) > 0
                 return True
-                #reading(HomeAssistant)
-                #inputs_read.set()
-                #inputs_read.clear()
             except:
                 return False
             
@@ -130,9 +117,6 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x40, pin, 0 if state else 1, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
-        
-        #req_mutex.clear()
-        #req_mutex.release()
 
     def set_poled_channel(self, ch, state):
         if not self.connected:
@@ -141,20 +125,15 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0xE6, 0x20, ch, state, 0, []))
         if req_mutex.locked():
             req_mutex.release()
-        
-        #req_mutex.clear()
-        #req_mutex.release()
 
     def set_pin_function(self, pin, function):
         if not self.connected:
-            return False  #2=output, 4=input
+            return False  #4=output, 2=input
 
         resp = self.send_request(self.prepare_command(0x10, pin, function, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
-        
-        #req_mutex.clear()
-        #req_mutex.release()
+
     #    p = struct.pack("II", int(blind.refPos * 600000 / 100), int(blind.refAngle * 10000 / 100))
     #    resp = self.send_request_control_node(self.prepare_command(0x50, blind.ID, p))        
     
@@ -166,9 +145,6 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x15, pin, 0, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
-        
-        #req_mutex.clear()
-        #req_mutex.release()
 
         pinmode = list(resp[3:5])
         res = pinmode[0]
@@ -178,15 +154,13 @@ class pokeys_interface():
         elif pinmode[0] == 4:
             print("output")
             res = 1'''
-        return res
+        return res #2=input, 4=output
 
     def get_input(self, pin):
         resp = self.send_request(self.prepare_command(0x30, pin, 0, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
-        
-        #req_mutex.clear()
-        #req_mutex.release()
+
         state = list(resp[3:5])
         binary_state = state[0]
         if state[0] == 0:
@@ -201,36 +175,30 @@ class pokeys_interface():
         if req_mutex.locked():
             req_mutex.release()
         
-        #req_mutex.clear()
-        #req_mutex.release()
         return self.get_input(pin)
 
-    def sensor_setup(self, hass, i):
+    def sensor_setup(self, i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
-        send_recive = hass.data.get("send_recive", None)
         resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
     
         return resp
 
-    def read_sensor_values(self,hass, i):
-        #send_recive = hass.data.get("send_recive", None)
-        resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [])) #, 0, 1, 0, []
+    def read_sensor_values(self, i):
+        resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, []))
         if req_mutex.locked():
             req_mutex.release()
         
         return resp
     
     
-    def sensor_readout(self, hass, host, id):
+    def sensor_readout(self, host, id):
         pk = pokeys_interface()
-        #host = pk.device_discovery(serial)
         pk.connect(host)
         i = int(id)
-        
-        #config = re.findall('..', binascii.hexlify(pk.sensor_setup(i)).decode())
-        packet = pk.read_sensor_values(hass, i)
+
+        packet = pk.read_sensor_values(i)
         valPacket = re.findall('..', binascii.hexlify(packet).decode())
         val_hex = str(valPacket[9])+str(valPacket[8])
         val = int(val_hex, base=16)/100
@@ -256,7 +224,7 @@ class pokeys_interface():
                         ip_int = socket.inet_aton(ip_address).hex()
                         # Create a UDP socket
                         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        print(ip_address)
+                        #print(ip_address)
 
                         try:
                             udp_socket.bind((ip_address, 0))
@@ -272,21 +240,12 @@ class pokeys_interface():
                         while True:
                             try:
                                 data, address = udp_socket.recvfrom(1024)
-                                #print(binascii.hexlify(data).decode())
                                 serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
                                 serial_num_dec = int(serial_num_hex, 16)
-                                print(serial_num_dec)
-                                print(address[0])
-                                print(f"Received response from {address}: {data}")
                                 if str(serial_num_dec) == serial_num_input:
-                                    print(address[0])
                                     return address[0]
-                                    
-                                else:
-                                    print("No device found")
 
                             except socket.timeout:
-                                print("No more responses")
                                 break
                         
                         udp_socket.close()
@@ -321,26 +280,9 @@ class pokeys_interface():
                                 serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
                                 serial_num_dec = int(serial_num_hex, 16)
                                 device_list.append(serial_num_dec)
-                                #logging.error(serial_num_dec)
-                                #return serial_num_dec
                             except socket.timeout:
                                 break
                         udp_socket.close()
-                        #logging.error(device_list)
             except ValueError:
                 pass 
         return device_list
-
-#if __name__ == "__main__":
-    # Test the interface
-#    print("PoKeys interface test...")
-#    pk = pokeys_interface()
-#    host = pk.device_discovery("31557")
-#    if not pk.connect(host):
-#        print("Not available")
-#    else:
-#        print("Device name " + pk.get_name())
-#        print(pk.inputs)
-#        print(pk.sensor_readout())
-#        print("done")
-

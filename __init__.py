@@ -78,8 +78,8 @@ inputs_updated = threading.Event()
 
 
 def send_notification(hass: HomeAssistant, message):
-    #creates a new notification with title "New PoKeys device discovered"
-    create(hass, message, "New PoKeys device discovered")     
+    #creates a new notification with title "Found PoKeys device"
+    create(hass, message, "Found PoKeys device")     
 
 #this function reads inputs of every pokeys device inside configuration and wirites those inputs to homeassistant
 def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
@@ -206,7 +206,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             #EasySensor setup
             try:
                 if (len(entity_sensor) > 0):
-                        if pk.sensor_setup(hass, 0):
+                        if pk.sensor_setup(0):
                             _LOGGER.info("EasySensors set up")
                         else:
                             logging.error("Sensors set up failed")

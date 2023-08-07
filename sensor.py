@@ -139,7 +139,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
             "serial": config[CONF_SERIAL],
             "id": config[CONF_TYPE]
         }
-        add_entities([
+        async_add_entities([
             PoKeys57E(
                 hass,
                 config.get(CONF_NAME),
@@ -321,7 +321,7 @@ class PoKeys57E(SensorEntity):
         # Implement your logic to retrieve or calculate the sensor value
         pk.connect(self._host)
         
-        self._state = pk.sensor_readout(self._hass, self._host, self._id)
+        self._state = pk.sensor_readout(self._host, self._id)
         
         #self._state = 42
         return self._state
@@ -403,39 +403,6 @@ class PoKeys57E(SensorEntity):
 
         return None
 
-    def _get_initial_suggested_unit(self) -> str | UndefinedType:
-        """Return the initial unit."""
-        # Unit suggested by the integration
-        suggested_unit_of_measurement = self.suggested_unit_of_measurement
-
-        if suggested_unit_of_measurement is None:
-            # Fallback to suggested by the unit conversion rules
-            suggested_unit_of_measurement = self.hass.config.units.get_converted_unit(
-                self.device_class, self.native_unit_of_measurement
-            )
-
-        if suggested_unit_of_measurement is None:
-            return UNDEFINED
-
-        return suggested_unit_of_measurement
-
-    def get_initial_entity_options(self) -> er.EntityOptionsType | None:
-        """Return initial entity options.
-
-        These will be stored in the entity registry the first time the entity is seen,
-        and then never updated.
-        """
-        suggested_unit_of_measurement = self._get_initial_suggested_unit()
-
-        if suggested_unit_of_measurement is UNDEFINED:
-            return None
-
-        return {
-            f"{DOMAIN}.private": {
-                "suggested_unit_of_measurement": suggested_unit_of_measurement
-            }
-        }
-
     @final
     @property
     def state_attributes(self) -> dict[str, Any] | None:
@@ -471,7 +438,7 @@ class PoKeys57E(SensorEntity):
         """Return the value reported by the sensor."""
         pk.connect(self._host)
    
-        self._attr_native_value = pk.sensor_readout(self._hass, self._host, self._id)
+        self._attr_native_value = pk.sensor_readout(self._host, self._id)
         
         return self._attr_native_value
 
@@ -493,58 +460,6 @@ class PoKeys57E(SensorEntity):
             return self.entity_description.native_unit_of_measurement
         return None
 
-    @property
-    def suggested_unit_of_measurement(self) -> str | None:
-        """Return the unit which should be used for the sensor's state.
-
-        This can be used by integrations to override automatic unit conversion rules,
-        for example to make a temperature sensor display in °C even if the configured
-        unit system prefers °F.
-
-        For sensors without a `unique_id`, this takes precedence over legacy
-        temperature conversion rules only.
-
-        For sensors with a `unique_id`, this is applied only if the unit is not set by
-        the user, and takes precedence over automatic device-class conversion rules.
-
-        Note:
-            suggested_unit_of_measurement is stored in the entity registry the first
-            time the entity is seen, and then never updated.
-        """
-        if hasattr(self, "_attr_suggested_unit_of_measurement"):
-            return self._attr_suggested_unit_of_measurement
-        if hasattr(self, "entity_description"):
-            return self.entity_description.suggested_unit_of_measurement
-        return None
-
-
-    @final
-    @property
-    def unit_of_measurement(self) -> str | None:
-        """Return the unit of measurement of the entity, after unit conversion."""
-        # Highest priority, for registered entities: unit set by user,with fallback to
-        # unit suggested by integration or secondary fallback to unit conversion rules
-        if self._sensor_option_unit_of_measurement is not UNDEFINED:
-            return self._sensor_option_unit_of_measurement
-
-        # Second priority, for non registered entities: unit suggested by integration
-        if not self.unique_id and self.suggested_unit_of_measurement:
-            return self.suggested_unit_of_measurement
-
-        # Third priority: Legacy temperature conversion, which applies
-        # to both registered and non registered entities
-        native_unit_of_measurement = self.native_unit_of_measurement
-
-        if (
-            self.device_class == SensorDeviceClass.TEMPERATURE
-            and native_unit_of_measurement
-            in {UnitOfTemperature.CELSIUS, UnitOfTemperature.FAHRENHEIT}
-        ):
-            return self.hass.config.units.temperature_unit
-
-        # Fourth priority: Native unit
-        return native_unit_of_measurement
-
     @final
     @property
     def state(self) -> Any:
@@ -554,7 +469,7 @@ class PoKeys57E(SensorEntity):
         value = self.native_value
         pk.connect(self._host)
      
-        value = pk.sensor_readout(self._hass, self._host, self._id)
+        value = pk.sensor_readout(self._host, self._id)
         
         
         # For the sake of validation, we can ignore custom device classes
@@ -766,64 +681,6 @@ class PoKeys57E(SensorEntity):
 
         return super().__repr__()
 
-    def _suggested_precision_or_none(self) -> int | None:
-        """Return suggested display precision, or None if not set."""
-        assert self.registry_entry
-        if (sensor_options := self.registry_entry.options.get(DOMAIN)) and (
-            precision := sensor_options.get("suggested_display_precision")
-        ) is not None:
-            return cast(int, precision)
-        return None
-
-    def _update_suggested_precision(self) -> None:
-        """Update suggested display precision stored in registry."""
-        assert self.registry_entry
-
-        device_class = self.device_class
-        display_precision = self.suggested_display_precision
-        default_unit_of_measurement = (
-            self.suggested_unit_of_measurement or self.native_unit_of_measurement
-        )
-        unit_of_measurement = self.unit_of_measurement
-
-        if (
-            display_precision is not None
-            and default_unit_of_measurement != unit_of_measurement
-            and device_class in UNIT_CONVERTERS
-        ):
-            converter = UNIT_CONVERTERS[device_class]
-
-            # Scale the precision when converting to a larger or smaller unit
-            # For example 1.1 Wh should be rendered as 0.0011 kWh, not 0.0 kWh
-            ratio_log = log10(
-                converter.get_unit_ratio(
-                    default_unit_of_measurement, unit_of_measurement
-                )
-            )
-            ratio_log = floor(ratio_log) if ratio_log > 0 else ceil(ratio_log)
-            display_precision = max(0, display_precision + ratio_log)
-
-        if display_precision is None and (
-            DOMAIN not in self.registry_entry.options
-            or "suggested_display_precision" not in self.registry_entry.options
-        ):
-            return
-        sensor_options: Mapping[str, Any] = self.registry_entry.options.get(DOMAIN, {})
-        if (
-            "suggested_display_precision" in sensor_options
-            and sensor_options["suggested_display_precision"] == display_precision
-        ):
-            return
-
-        registry = er.async_get(self.hass)
-        sensor_options = dict(sensor_options)
-        sensor_options.pop("suggested_display_precision", None)
-        if display_precision is not None:
-            sensor_options["suggested_display_precision"] = display_precision
-        registry.async_update_entity_options(
-            self.entity_id, DOMAIN, sensor_options or None
-        )
-
     def _custom_unit_or_undef(
         self, primary_key: str, secondary_key: str
     ) -> str | None | UndefinedType:
@@ -944,25 +801,6 @@ class RestoreSensor(SensorEntity, RestoreEntity):
             return None
         return SensorExtraStoredData.from_dict(restored_last_extra_data.as_dict())
 
-
-@callback
-def async_update_suggested_units(hass: HomeAssistant) -> None:
-    """Update the suggested_unit_of_measurement according to the unit system."""
-    registry = er.async_get(hass)
-
-    for entry in registry.entities.values():
-        if entry.domain != DOMAIN:
-            continue
-
-        sensor_private_options = dict(entry.options.get(f"{DOMAIN}.private", {}))
-        sensor_private_options["refresh_initial_entity_options"] = True
-        registry.async_update_entity_options(
-            entry.entity_id,
-            f"{DOMAIN}.private",
-            sensor_private_options,
-        )
-
-
 @callback
 def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> str:
     """Return the state rounded for presentation."""
@@ -980,7 +818,7 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
     value = state.state
     pk.connect(self._host)
 
-    value = pk.sensor_readout(self._hass, self._host, self._id)
+    value = pk.sensor_readout(self._host, self._id)
     
     if (precision := display_precision()) is None:
         return value
