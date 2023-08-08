@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
@@ -8,12 +7,11 @@ import logging
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from .pokeys import pokeys_instance
-
 from pprint import pformat
 from homeassistant.backports.enum import StrEnum
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.switch import (PLATFORM_SCHEMA, PLATFORM_SCHEMA_BASE, SwitchEntity)  #, SwitchDevice
-from homeassistant.const import (CONF_NAME, CONF_PIN) #, CONF_SERIAL
+from homeassistant.components.switch import (PLATFORM_SCHEMA, PLATFORM_SCHEMA_BASE, SwitchEntity)
+from homeassistant.const import (CONF_NAME, CONF_PIN)
 from homeassistant.const import (
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
@@ -23,13 +21,10 @@ from homeassistant.const import (
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import ToggleEntity, ToggleEntityDescription
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
 from custom_components import pokeys
-import threading
-
 from homeassistant.components.switch import DOMAIN
 
 SCAN_INTERVAL = timedelta(seconds=1)
@@ -46,6 +41,7 @@ DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
 CONF_DEVICE = "device"
 
+#shema for general config
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
     vol.Optional(CONF_SERIAL): cv.string,
@@ -64,17 +60,17 @@ DEVICE_CLASSES = [cls.value for cls in SwitchDeviceClass]
 DEVICE_CLASS_OUTLET = SwitchDeviceClass.OUTLET.value
 DEVICE_CLASS_SWITCH = SwitchDeviceClass.SWITCH.value
 
-mutex = threading.Lock()
 
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None):
     component = hass.data[DOMAIN] = EntityComponent[SwitchEntity](
         _LOGGER, DOMAIN, hass, SCAN_INTERVAL
     )
 
-
+    #fetch list of switch entities to add
     switches = hass.data.get("switches", None)
     platform_run = True
 
+    #add switch entities for general configuration
     try:
         switch = {
             "name": config[CONF_NAME],
@@ -93,6 +89,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     except:
         pass
     
+    #add switch entities for pokeys configuration
     try:
         if platform_run:
             for switch in switches:
@@ -113,7 +110,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         pass
     
     await component.async_setup(config)
-
+    #register services for switch refrence entity
     component.async_register_entity_service(SERVICE_TURN_OFF, {}, "async_turn_off")
     component.async_register_entity_service(SERVICE_TURN_ON, {}, "async_turn_on")
     component.async_register_entity_service(SERVICE_TOGGLE, {}, "async_toggle")
@@ -125,9 +122,9 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 class PoKeys57E(SwitchEntity):
 
-    def __init__(self, hass, name, serial, pin): 
-        self._serial = serial
-        self._host = pk.device_discovery(self._serial)
+    def __init__(self, hass, name, host, pin): 
+        #initialization for SwitchEntity
+        self._host = host
         self._switch = pokeys_instance(self._host)
 
         self._hass = hass
@@ -140,6 +137,7 @@ class PoKeys57E(SwitchEntity):
         self._hosts = self._hass.data.get("hosts", None)
         pk.connect(self._host)
         pk.set_pin_function(int(pin)-1, 4)
+        #set the selected pin as output
 
     @property
     def name(self):
@@ -153,7 +151,7 @@ class PoKeys57E(SwitchEntity):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 1)
-        
+        #after selected pin is turned on wait for updated state
         self._inputs_updated.wait(timeout=None)
         while self._hass.data.get("host_cycle", None) != self._host:
             pass
@@ -164,11 +162,11 @@ class PoKeys57E(SwitchEntity):
         self.schedule_update_ha_state()
 
 
-    def turn_off(self):#, **kwargs
+    def turn_off(self):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 0)
-        
+        #after selected pin is turned off wait for updated state
         self._inputs_updated.wait(timeout=None)
         while self._hass.data.get("host_cycle", None) != self._host:
             pass
@@ -201,9 +199,9 @@ class SwitchEntity(ToggleEntity):
     entity_description: SwitchEntityDescription
     _attr_device_class: SwitchDeviceClass | None
 
-    def __init__(self, hass, name, serial, pin): 
-        self._serial = serial
-        self._host = pk.device_discovery(serial)
+    def __init__(self, hass, name, host, pin): 
+        #refrence entity initialization
+        self._host = host
         self._switch = pokeys_instance(self._host)
 
         self._hass = hass
@@ -229,7 +227,7 @@ class SwitchEntity(ToggleEntity):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 1)
-        
+        #refrence entity turn on
         self._inputs_updated.wait(timeout=None)
         while self._hass.data.get("host_cycle", None) != self._host:
             pass
@@ -243,7 +241,7 @@ class SwitchEntity(ToggleEntity):
         pin = self._pin
         pk.connect(self._host)
         pk.set_output(int(pin)-1, 0)
-        
+        #refrence entity turn off
         self._inputs_updated.wait(timeout=None)
         while self._hass.data.get("host_cycle", None) != self._host:
             pass

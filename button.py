@@ -125,10 +125,9 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 
 class PoKeys57E(ButtonEntity):
-    def __init__(self, hass, name, serial, pin, delay):
+    def __init__(self, hass, name, host, pin, delay):
         """Initialize the button entity."""
-        self._serial = serial
-        self._host = pk.device_discovery(self._serial)
+        self._host = host
         self._button = pokeys_instance(self._host)
 
         self._hass = hass
@@ -246,10 +245,9 @@ class ButtonEntity(RestoreEntity):
     _attr_state: None = None
     __last_pressed: datetime | None = None
 
-    def __init__(self, hass, name, serial, pin, delay):
+    def __init__(self, hass, name, host, pin, delay):
         """Initialize the button entity."""
-        self._serial = serial
-        host = pk.device_discovery(serial)
+        self._host = host
         self._button = pokeys_instance(host)
 
         self._hass = hass
@@ -260,7 +258,7 @@ class ButtonEntity(RestoreEntity):
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         self._inputs = self._hass.data.get("inputs", None)
         self._hosts_index = self._hass.data.get("host_index", None)
-        pk.connect(host)
+        pk.connect(self._host)
         pk.set_pin_function(int(self._pin)-1, 4)
         pk.set_output(int(pin)-1, 0)
 

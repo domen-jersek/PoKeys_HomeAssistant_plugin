@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import logging
 import asyncio
 from collections.abc import Mapping
@@ -17,13 +16,8 @@ from math import ceil, floor, log10
 import re
 from typing import Any, Final, cast, final, Literal
 
-
-
 from typing_extensions import Self
-
 from homeassistant.config_entries import ConfigEntry
-
-# pylint: disable=[hass-deprecated-import]
 from homeassistant.const import (  # noqa: F401
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_UNIT_OF_MEASUREMENT,
@@ -49,11 +43,9 @@ from homeassistant.helpers.typing import UNDEFINED, ConfigType, StateType, Undef
 from homeassistant.util import dt as dt_util
 from homeassistant.util.enum import try_parse_enum
 from custom_components import pokeys
-
 from datetime import timedelta
 
-
-from homeassistant.components.sensor import *
+#from homeassistant.components.sensor import *
 from homeassistant.components.sensor import DOMAIN
 from homeassistant.loader import bind_hass
 
@@ -81,9 +73,8 @@ from .const import (  # noqa: F401
 
 from .pokeys import pokeys_instance
 from .pokeys_interface import pokeys_interface
-
 from .websocket_api import async_setup as async_setup_ws_api
-#import websocket_api
+
 pk = pokeys_interface()
 
 _LOGGER = logging.getLogger("pokeys")
@@ -95,8 +86,8 @@ ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
 NEGATIVE_ZERO_PATTERN = re.compile(r"^-(0\.?0*)$")
 
-#SCAN_INTERVAL: Final = timedelta(seconds=30)
-SCAN_INTERVAL = timedelta(seconds=20)
+#how often the sensor will be read
+SCAN_INTERVAL = timedelta(seconds=8)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
@@ -121,18 +112,17 @@ __all__ = [
     "SensorStateClass",
 ]
 
-# mypy: disallow-any-generics
-
-
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool: # -> bool
     """Track states and offer events for sensors."""
     component = hass.data[DOMAIN] = EntityComponent[SensorEntity](
         logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
-    )
+    )#setup of component
 
+    #fetch list of sensors to add to homeassistant
     sensors = hass.data.get("sensors", None)
     platform_run = True
 
+    #add general configuration
     try:
         sensor = {
             "name": config[CONF_NAME],
@@ -150,7 +140,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         platform_run = False
     except:
         pass
-    
+    #add pokeys configuration
     try:
         if platform_run:
             for sensor in sensors:
@@ -173,7 +163,6 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     async_setup_ws_api(hass)
     _LOGGER.info(pformat(config))
     await component.async_setup(config)
-    #await async_add_entities(sensor)
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
@@ -225,9 +214,8 @@ class PoKeys57E(SensorEntity):
     _sensor_option_display_precision: int | None = None
     _sensor_option_unit_of_measurement: str | None | UndefinedType = UNDEFINED
 
-    def __init__(self, hass, name, serial, id):
-        self._serial = serial
-        self._host = pk.device_discovery(self._serial)
+    def __init__(self, hass, name, host, id):
+        self._host = host
         self._sensor = pokeys_instance(self._host)
         self._hass = hass
         

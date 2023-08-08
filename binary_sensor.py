@@ -31,19 +31,21 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_NAME
 from homeassistant.const import CONF_PIN
 from custom_components import pokeys
-#cv = config_validation()
-
 from .pokeys_interface import pokeys_interface
 pk = pokeys_interface()
 
 _LOGGER = logging.getLogger("pokeys")
 
 DOMAIN = "pokeys"
-SCAN_INTERVAL = timedelta(seconds=5)
+
+#update interval
+SCAN_INTERVAL = timedelta(seconds=4)
+
 CONF_SERIAL = "serial"
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
+#schema for generic configuration
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
     vol.Required(CONF_SERIAL): cv.string,
@@ -172,18 +174,18 @@ DEVICE_CLASS_UPDATE = BinarySensorDeviceClass.UPDATE.value
 DEVICE_CLASS_VIBRATION = BinarySensorDeviceClass.VIBRATION.value
 DEVICE_CLASS_WINDOW = BinarySensorDeviceClass.WINDOW.value
 
-# mypy: disallow-any-generics
-
-#async_setup
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Track states and offer events for binary sensors."""
+    #define binary sensor component
     component = hass.data[DOMAIN] = EntityComponent[BinarySensorEntity](
         logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
     )
 
+    #fetch list of binary sensors to be added to hass
     binary_sensors = hass.data.get("binary_sensors", None)
     platform_run = True
 
+    #add entities for generic configuration
     try:
         binary_sensor = {
             "name": config[CONF_NAME],
@@ -201,7 +203,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         platform_run = False
     except:
         pass
-    
+    #add entities for pokeys configuration
     try:
         if platform_run:
             for binary_sensor in binary_sensors:
@@ -223,13 +225,12 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
     _LOGGER.info(pformat(config))
     await component.async_setup(config)
-    #async_add_entities([binary_sensor])
     return True
 
 class PoKeys57E(BinarySensorEntity):
-    def __init__(self, hass, name, serial, pin):
-        self._serial = serial
-        self._host = pk.device_discovery(self._serial)
+    def __init__(self, hass, name, host, pin):
+        #initialization of BinarySensorEntity
+        self._host = host
         self._binary_sensor = pokeys_instance(self._host)
         self._hass = hass
         
@@ -241,6 +242,7 @@ class PoKeys57E(BinarySensorEntity):
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
 
         pk.connect(self._host)
+        #after initialization set the selected pin as an input
         pk.set_pin_function(int(self._pin)-1, 2)
         
 
@@ -255,16 +257,12 @@ class PoKeys57E(BinarySensorEntity):
     async def async_update(self):
         
         pk.connect(self._host)
-
-        #self._inputs_updated.wait(timeout=None)
-        #while self._hass.data.get("host_cycle", None) != self._host:
-        #    pass
+        #set state based on the device inputs provided by the inputs update cycle
         self._state = self._inputs[self._hosts.index(self._host)][int(self._pin)-1]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Set up a config entry."""
-
     
     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
     return await component.async_setup_entry(entry)
@@ -272,8 +270,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: Con
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-
-    #async_add_entities(PoKeys57E(hass, CONF_NAME, CONF_HOST))
 
     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
     return await component.async_unload_entry(entry)
@@ -294,9 +290,9 @@ class BinarySensorEntity(Entity):
     _attr_is_on: bool | None = None
     _attr_state: None = None
 
-    def __init__(self, hass, name, serial, pin):
-        self._serial = serial
-        self._host = pk.device_discovery(self._serial)
+    def __init__(self, hass, name, host, pin):
+        #initialization of reference entity
+        self._host = host
         self._binary_sensor = pokeys_instance(self._host)
         self._hass = hass
         
@@ -307,15 +303,12 @@ class BinarySensorEntity(Entity):
         self._hosts = self._hass.data.get("hosts", None)
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         pk.connect(self._host)
+        #set pin as input
         pk.set_pin_function(int(self._pin)-1, 2)
 
     @property
     def name(self):
         return self._name
-
-    #@property
-    #def is_on(self):
-    #    return self._state
 
     @property
     def device_class(self) -> BinarySensorDeviceClass | None:
@@ -332,9 +325,7 @@ class BinarySensorEntity(Entity):
         
         pin = self._pin
         pk.connect(self._host)
-        #self._inputs_updated.wait(timeout=None)
-        #while self._hass.data.get("host_cycle", None) != self._host:
-        #    pass
+        #when the state of the pin is True homeassistant recives that as on, False is off
         if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
             return self._attr_is_on
         return self._state
@@ -343,6 +334,7 @@ class BinarySensorEntity(Entity):
     @property
     def state(self) -> Literal["on", "off"] | None:
         """Return the state of the binary sensor."""
+        #default state is off
         if (is_on := self.is_on) is None:
             return None
         return STATE_ON if is_on else STATE_OFF

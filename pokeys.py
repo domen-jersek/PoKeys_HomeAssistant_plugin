@@ -1,16 +1,15 @@
-import asyncio
 import logging
-from homeassistant.const import (CONF_NAME) #, CONF_SERIAL
+from homeassistant.const import CONF_NAME
 from .pokeys_interface import pokeys_interface
 
 pk = pokeys_interface()
 LOGGER = logging.getLogger(__name__)
-CONF_SERIAL = "serial"
+CONF_HOST = "host"
 
 class pokeys_instance:
-    def __init__(self, serial: str):
-        self._serial = serial
-        host = pk.device_discovery(serial)
+    #device instance
+    def __init__(self, host: str):
+        self._host = host
         self._device = pk.connect(host)
         self._is_on = None
         self._connected = None
@@ -18,10 +17,10 @@ class pokeys_instance:
     async def _send(self):
         host = pk.device_discovery(_serial)
         if not pk.connect(host):
-            LOGGER.error("Not available")
+            logging.error("Not available")
         else:
-            LOGGER.error("Device name " + pk.get_name())
-            LOGGER.error(pk.inputs)
+            logging.error("Device name " + pk.get_name())
+            logging.error(pk.inputs)
 
     def serial(self):
         return self._serial

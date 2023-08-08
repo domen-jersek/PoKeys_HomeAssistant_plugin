@@ -166,7 +166,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     pin_button = entity_config["pin"]
                     delay_button = entity_config["delay"]
                     
-                    entity_button = [name_button, serial, pin_button, delay_button]
+                    entity_button = [name_button, host, pin_button, delay_button]
                     buttons.append(entity_button)
                     
             except:
@@ -176,7 +176,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_switch = entity_config["name"]
                     pin_switch = entity_config["pin"]
 
-                    entity_switch = [name_switch, serial, pin_switch]
+                    entity_switch = [name_switch, host, pin_switch]
                     switches.append(entity_switch)
                     
             except:
@@ -186,7 +186,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_binary_sensor = entity_config["name"]
                     pin_binary_sensor = entity_config["pin"]
 
-                    entity_binary_sensor = [name_binary_sensor, serial, pin_binary_sensor]
+                    entity_binary_sensor = [name_binary_sensor, host, pin_binary_sensor]
                     binary_sensors.append(entity_binary_sensor)
 
             except:
@@ -197,7 +197,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_sensor = entity_config["name"]
                     type_sensor = entity_config["id"]
                     
-                    entity_sensor = [name_sensor, serial, type_sensor]
+                    entity_sensor = [name_sensor, host, type_sensor]
                     sensors.append(entity_sensor)
 
             except:
