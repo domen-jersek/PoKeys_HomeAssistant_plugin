@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger("pokeys")
 DOMAIN = "pokeys"
 
 #update interval
-SCAN_INTERVAL = timedelta(seconds=4)
+SCAN_INTERVAL = timedelta(seconds=3)
 
 CONF_SERIAL = "serial"
 
