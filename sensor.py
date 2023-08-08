@@ -45,11 +45,9 @@ from homeassistant.util.enum import try_parse_enum
 from custom_components import pokeys
 from datetime import timedelta
 
-#from homeassistant.components.sensor import *
 from homeassistant.components.sensor import DOMAIN
 from homeassistant.loader import bind_hass
 
-#from .const import CONF_SERIAL
 from .const import (  # noqa: F401
     ATTR_LAST_RESET,
     ATTR_OPTIONS,
@@ -215,6 +213,7 @@ class PoKeys57E(SensorEntity):
     _sensor_option_unit_of_measurement: str | None | UndefinedType = UNDEFINED
 
     def __init__(self, hass, name, host, id):
+        #initialization of sensor entity
         self._host = host
         self._sensor = pokeys_instance(self._host)
         self._hass = hass
@@ -306,12 +305,9 @@ class PoKeys57E(SensorEntity):
 
     async def async_update(self):
         """Update the sensor value."""
-        # Implement your logic to retrieve or calculate the sensor value
         pk.connect(self._host)
         
         self._state = pk.sensor_readout(self._host, self._id)
-        
-        #self._state = 42
         return self._state
 
 
@@ -323,7 +319,6 @@ class PoKeys57E(SensorEntity):
         if not self.registry_entry:
             return
         self._async_read_entity_options()
-        #self._update_suggested_precision()
 
     @property
     def device_class(self) -> SensorDeviceClass | None:
@@ -425,7 +420,6 @@ class PoKeys57E(SensorEntity):
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         pk.connect(self._host)
-   
         self._attr_native_value = pk.sensor_readout(self._host, self._id)
         
         return self._attr_native_value
@@ -456,7 +450,6 @@ class PoKeys57E(SensorEntity):
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
         pk.connect(self._host)
-     
         value = pk.sensor_readout(self._host, self._id)
         
         
@@ -805,7 +798,6 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
 
     value = state.state
     pk.connect(self._host)
-
     value = pk.sensor_readout(self._host, self._id)
     
     if (precision := display_precision()) is None:
