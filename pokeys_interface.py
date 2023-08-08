@@ -148,12 +148,7 @@ class pokeys_interface():
 
         pinmode = list(resp[3:5])
         res = pinmode[0]
-        '''if pinmode[0] == 2:
-            print("input")
-            res = 0
-        elif pinmode[0] == 4:
-            print("output")
-            res = 1'''
+
         return res #2=input, 4=output
 
     def get_input(self, pin):
@@ -192,7 +187,7 @@ class pokeys_interface():
         
         return resp
     
-    
+    #parsed response of read_sensor_values()
     def sensor_readout(self, host, id):
         pk = pokeys_interface()
         pk.connect(host)
@@ -204,6 +199,7 @@ class pokeys_interface():
         val = int(val_hex, base=16)/100
         return val
 
+    #function that searches every web interface by sending a broadcast packet, if a pokeys device exists it responds with that device serial is used as its id
     def device_discovery(self, serial_num_input):
         broadcast_address = '<broadcast>'
         port = 20055

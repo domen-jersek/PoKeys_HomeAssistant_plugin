@@ -16,7 +16,6 @@ from .pokeys import pokeys_instance
 from .pokeys_interface import pokeys_interface
 from pprint import pformat
 from homeassistant.loader import bind_hass
-#from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from datetime import timedelta
@@ -33,8 +32,6 @@ DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
 CONF_PIN = "pin"
 CONF_TYPE = "id"
-
-#PLATFORM_POKEYS = "pokeys"
 
 #each entity list contains name of the entity and the parameters it requiers
 ENTITY_SCHEMA = vol.Schema(
@@ -106,7 +103,7 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
             inputs_updated.clear()
         
 
-"""def read_sensor_cycle(hass: HomeAssistant, devices, sensors, serial, sensors_list, id_list):
+"""def read_sensor_cycle(hass: HomeAssistant, devices, sensors, sensors_list, id_list):
     
     for host in devices:
         if serial in sensors:
