@@ -7,6 +7,7 @@ import netifaces
 import binascii
 import re
 import threading
+from operator import add, sub
 
 req_mutex = threading.Lock()
 
@@ -35,11 +36,11 @@ class pokeys_interface():
         #return self.read_inputs()
 
     def disconnect(self):
-        self.client.close()
+        #self.client.close()
         self.client_pk.close()
-        return
+        #return
 
-    def prepare_command(self, cmdID, param1, param2, param3, param4, data):
+    def prepare_command(self, cmdID, param1, param2, param3, param4, data, data_1):
         self.requestID = (self.requestID + 1) % 256
 
         req = bytearray(64)
@@ -51,6 +52,10 @@ class pokeys_interface():
         req[5] = param4
         req[6] = self.requestID
         req[7] = sum(req[0:7]) % 256
+        i = 8
+        for d in data_1:
+            req[i] = d
+            i+=1
         
         l = len(data)
         if l > 0:
@@ -79,7 +84,7 @@ class pokeys_interface():
         if not self.connected:
             return None
 
-        resp = self.send_request(self.prepare_command(0x00, 0, 0, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x00, 0, 0, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
         
@@ -95,7 +100,7 @@ class pokeys_interface():
         if not self.connected:
             return False
 
-        resp = self.send_request(self.prepare_command(0xCC, 0, 0, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0xCC, 0, 0, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
 
@@ -114,7 +119,7 @@ class pokeys_interface():
         if not self.connected:
             return False
 
-        resp = self.send_request(self.prepare_command(0x40, pin, 0 if state else 1, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x40, pin, 0 if state else 1, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
 
@@ -122,7 +127,7 @@ class pokeys_interface():
         if not self.connected:
             return False
 
-        resp = self.send_request(self.prepare_command(0xE6, 0x20, ch, state, 0, []))
+        resp = self.send_request(self.prepare_command(0xE6, 0x20, ch, state, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
 
@@ -130,7 +135,7 @@ class pokeys_interface():
         if not self.connected:
             return False  #4=output, 2=input
 
-        resp = self.send_request(self.prepare_command(0x10, pin, function, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x10, pin, function, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
 
@@ -142,7 +147,7 @@ class pokeys_interface():
     # 
 
     def read_pin_function(self, pin):
-        resp = self.send_request(self.prepare_command(0x15, pin, 0, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x15, pin, 0, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
 
@@ -152,7 +157,7 @@ class pokeys_interface():
         return res #2=input, 4=output
 
     def get_input(self, pin):
-        resp = self.send_request(self.prepare_command(0x30, pin, 0, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x30, pin, 0, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
 
@@ -166,7 +171,7 @@ class pokeys_interface():
         return binary_state
 
     def read_digital_input(self, pin):
-        resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, [0x40]))
+        resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, [0x40], []))
         if req_mutex.locked():
             req_mutex.release()
         
@@ -174,14 +179,14 @@ class pokeys_interface():
 
     def sensor_setup(self, i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
-        resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
     
         return resp
 
     def read_sensor_values(self, i):
-        resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, []))
+        resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
         
@@ -282,3 +287,54 @@ class pokeys_interface():
             except ValueError:
                 pass 
         return device_list
+
+    def poextbus_on(self, pin):
+        outputs = 10 *[0]
+        outputs_state = pk.read_poextbus()
+        for out_card in range(9,0,-1):
+            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
+                outputs[out_card] = 1 << (pin % 8)
+                
+                #print(outputs[out_card])
+                #print(out_card)
+
+        if pin % 8 == 0:
+            outputs[pin//8] = 1
+            outputs.reverse()               
+        
+        if outputs != outputs_state:
+            outputs = list(map(add, outputs_state, outputs))
+
+        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
+        return resp
+
+    def poextbus_off(self, pin):
+        outputs = 10 *[0]
+        outputs_state = pk.read_poextbus()
+        for out_card in range(9,0,-1):
+            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
+                outputs[out_card] = 1 << (pin % 8)
+                
+                #print(outputs[out_card])
+                #print(out_card)
+
+        if pin % 8 == 0:
+            outputs[pin//8] = 1
+            outputs.reverse()               
+        
+        outputs = list(map(sub, outputs_state, outputs))
+
+        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
+        return resp
+
+    def read_poextbus(self):
+        #resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
+        l = list(self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[])))
+        # hex_string = ""
+        # j = 0
+        # for x in l:
+        #     if j == 8 or j == 18: hex_string += "|"
+        #     hex_string += hex(x).split("0x")[1].upper() + ","
+        #     j+=1
+        
+        return l[8:18]#hex_string
