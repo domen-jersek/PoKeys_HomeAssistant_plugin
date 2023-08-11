@@ -8,6 +8,7 @@ import binascii
 import re
 import threading
 from operator import add, sub
+import logging
 
 req_mutex = threading.Lock()
 
@@ -288,48 +289,13 @@ class pokeys_interface():
                 pass 
         return device_list
 
-    def poextbus_on(self, pin):
-        outputs = 10 *[0]
-        outputs_state = pk.read_poextbus()
-        for out_card in range(9,0,-1):
-            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
-                outputs[out_card] = 1 << (pin % 8)
-                
-                #print(outputs[out_card])
-                #print(out_card)
-
-        if pin % 8 == 0:
-            outputs[pin//8] = 1
-            outputs.reverse()               
-        
-        if outputs != outputs_state:
-            outputs = list(map(add, outputs_state, outputs))
-
-        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
-        return resp
-
-    def poextbus_off(self, pin):
-        outputs = 10 *[0]
-        outputs_state = pk.read_poextbus()
-        for out_card in range(9,0,-1):
-            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
-                outputs[out_card] = 1 << (pin % 8)
-                
-                #print(outputs[out_card])
-                #print(out_card)
-
-        if pin % 8 == 0:
-            outputs[pin//8] = 1
-            outputs.reverse()               
-        
-        outputs = list(map(sub, outputs_state, outputs))
-
-        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
-        return resp
-
     def read_poextbus(self):
         #resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
-        l = list(self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[])))
+        resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
+        if req_mutex.locked():
+            req_mutex.release()
+
+        l = list(resp)
         # hex_string = ""
         # j = 0
         # for x in l:
@@ -338,3 +304,62 @@ class pokeys_interface():
         #     j+=1
         
         return l[8:18]#hex_string
+
+    def poextbus_on(self, pin, host):
+        pk = pokeys_interface()
+        outputs = 10 *[0]
+        pk.connect(host)
+        outputs_state = pk.read_poextbus()
+        for out_card in range(9,0,-1):
+            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
+                outputs[out_card] = 1 << (pin % 8)
+                out_card_n = out_card
+
+        if pin % 8 == 0:
+            outputs[pin//8] = 1
+            outputs.reverse()
+            out_card_n = outputs.index(1)              
+
+        for i in range(len(outputs_state)):
+            if (outputs_state[i] | outputs[i]) != outputs_state[i]:
+                # Something new
+                outputs_state[i] |= outputs[i]
+                # send
+                pk.connect(host)
+                resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
+            else:
+                # Nothing new
+                pass
+            
+            return resp
+    
+
+    def poextbus_off(self, pin, host):
+        pk = pokeys_interface()
+        outputs = 10 *[0]
+        pk.connect(host)
+        outputs_state = pk.read_poextbus()
+        for out_card in range(9,0,-1):
+            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
+                outputs[out_card] = 1 << (pin % 8)
+
+        if pin % 8 == 0:
+            outputs[pin//8] = 1
+            outputs.reverse()
+            
+        for i in range(len(outputs_state)):
+
+            if (outputs_state[i] & outputs[i]) != outputs_state[i]:
+                # Something new
+                outputs_state[i] &= ~outputs[i]
+                # send
+                pk.connect(host)
+                resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
+            else:
+                # Nothing new
+                pass
+        if outputs == outputs_state:
+            outputs = list(map(sub, outputs_state, outputs))
+            pk.connect(host)
+            resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
+        return resp
