@@ -160,9 +160,12 @@ class PoKeys57E(ButtonEntity):
     async def async_added_to_hass(self):
         """Perform any actions when the button entity is added to Home Assistant."""
         
-        pk.connect(self._host)
-        pk.set_pin_function(int(self._pin)-1, 4)
-        pk.set_output(int(self._pin)-1, 0)
+        if pk.connect(self._host):
+            try:
+                pk.set_pin_function(int(self._pin)-1, 4)
+                pk.set_output(int(self._pin)-1, 0)
+            except:
+                pass
         #when button entity is added to HA set the configured pin as output and turn it off
 
         _LOGGER.info("Custom button entity added to Home Assistant.")
