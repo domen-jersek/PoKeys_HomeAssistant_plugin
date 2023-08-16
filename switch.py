@@ -154,6 +154,8 @@ class PoKeys57E(SwitchEntity):
                 pk.connect(self._host)
                 if pk.poextbus_on(int(self._pin)-56, self._host):
                     self._state = True
+                else:
+                    logging.error("poextpin is on")
             except:
                 logging.error("poextbus_on failed")
         else:
@@ -177,6 +179,8 @@ class PoKeys57E(SwitchEntity):
                 pk.connect(self._host)
                 if pk.poextbus_off(int(self._pin)-56, self._host):
                     self._state = False
+                else:
+                    logging.error("poextbus pin is off")
             except:
                 logging.error("poextbus_off failed")
         else:
