@@ -372,3 +372,11 @@ class pokeys_interface():
                 req_mutex.release()
             if resp != None:
                     return True
+
+    def poextbus_off_all(self, host):
+        pk = pokeys_interface()
+        pk.connect(host)
+        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
+        if req_mutex.locked():
+            req_mutex.release()
+        return True

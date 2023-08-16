@@ -179,20 +179,30 @@ class PoKeys57E(ButtonEntity):
         pin = self._pin
         delay =self._delay
         
-        if int(self._pin) > 55:
+        if int(self._pin) == 150:
+            pk.connect(self._host)
+            pk.poextbus_off_all(self._host) #failsafe to turn off the whole poextbus in case of too many requests
+        
+        elif int(self._pin) > 55:
             try:
                 pk.connect(self._host)
-                if pk.poextbus_on(int(self._pin)-56, self._host):# == pk.read_poextbus():
+                if pk.poextbus_on(int(self._pin)-56, self._host):
                     self._state = "pressed"
+                else:
+                    logging.error("poextbus pin is on")
             except:
                 logging.error("poextbus_on failed")
+                pk.connect(self._host)
             time.sleep(int(delay))
             try:
                 pk.connect(self._host)
                 if pk.poextbus_off(int(self._pin)-56, self._host):
                     self._state = "released"
+                else:
+                    logging.error("poextbus pin is off")
             except:
                 logging.error("poextbus_off failed")
+            
         else:
             pk.connect(self._host)
             #turn the selected pin on and listen for change of state
