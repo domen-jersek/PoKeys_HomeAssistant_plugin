@@ -149,31 +149,47 @@ class PoKeys57E(SwitchEntity):
     
     def turn_on(self): 
         pin = self._pin
-        pk.connect(self._host)
-        pk.set_output(int(pin)-1, 1)
-        #after selected pin is turned on wait for updated state
-        self._inputs_updated.wait(timeout=None)
-        while self._hass.data.get("host_cycle", None) != self._host:
-            pass
-        
-        if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
-            self._state = True
-        
-        self.schedule_update_ha_state()
+        if int(self._pin) > 55:
+            try:
+                pk.connect(self._host)
+                if pk.poextbus_on(int(self._pin)-56, self._host):
+                    self._state = True
+            except:
+                logging.error("poextbus_on failed")
+        else:
+            pk.connect(self._host)
+            pk.set_output(int(pin)-1, 1)
+            #after selected pin is turned on wait for updated state
+            self._inputs_updated.wait(timeout=None)
+            while self._hass.data.get("host_cycle", None) != self._host:
+                pass
+            
+            if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
+                self._state = True
+            
+            self.schedule_update_ha_state()
 
 
     def turn_off(self):
         pin = self._pin
-        pk.connect(self._host)
-        pk.set_output(int(pin)-1, 0)
-        #after selected pin is turned off wait for updated state
-        self._inputs_updated.wait(timeout=None)
-        while self._hass.data.get("host_cycle", None) != self._host:
-            pass
-        
-        if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
-            self._state = False
-        self.schedule_update_ha_state()
+        if int(self._pin) > 55:
+            try:
+                pk.connect(self._host)
+                if pk.poextbus_off(int(self._pin)-56, self._host):
+                    self._state = False
+            except:
+                logging.error("poextbus_off failed")
+        else:
+            pk.connect(self._host)
+            pk.set_output(int(pin)-1, 0)
+            #after selected pin is turned off wait for updated state
+            self._inputs_updated.wait(timeout=None)
+            while self._hass.data.get("host_cycle", None) != self._host:
+                pass
+            
+            if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
+                self._state = False
+            self.schedule_update_ha_state()
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
