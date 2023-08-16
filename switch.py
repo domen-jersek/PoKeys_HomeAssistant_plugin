@@ -135,8 +135,11 @@ class PoKeys57E(SwitchEntity):
         self._inputs = self._hass.data.get("inputs", None)
         
         self._hosts = self._hass.data.get("hosts", None)
-        pk.connect(self._host)
-        pk.set_pin_function(int(pin)-1, 4)
+        if pk.connect(self._host):
+            try:
+                pk.set_pin_function(int(pin)-1, 4)
+            except:
+                pass
         #set the selected pin as output
 
     @property
