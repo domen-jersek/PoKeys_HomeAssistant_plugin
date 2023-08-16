@@ -195,7 +195,7 @@ class PoKeys57E(ButtonEntity):
                     logging.error("poextbus pin is on")
             except:
                 logging.error("poextbus_on failed")
-                pk.connect(self._host)
+            
             time.sleep(int(delay))
             try:
                 pk.connect(self._host)
