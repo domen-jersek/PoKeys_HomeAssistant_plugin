@@ -351,7 +351,7 @@ class pokeys_interface():
             
         for i in range(len(outputs_state)):
 
-            if (outputs_state[i] & outputs[i]) != outputs_state[i]:
+            if (outputs_state[i] & outputs[i]):
                 # Something new
                 outputs_state[i] &= ~outputs[i]
                 # send
