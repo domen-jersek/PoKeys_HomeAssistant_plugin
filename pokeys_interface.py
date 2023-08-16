@@ -327,12 +327,14 @@ class pokeys_interface():
                 # send
                 pk.connect(host)
                 resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
+                if req_mutex.locked():
+                    req_mutex.release()
+                if resp != None:
+                    return True
             else:
                 # Nothing new
                 pass
-            
-            return resp
-    
+
 
     def poextbus_off(self, pin, host):
         pk = pokeys_interface()
@@ -355,6 +357,10 @@ class pokeys_interface():
                 # send
                 pk.connect(host)
                 resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
+                if req_mutex.locked():
+                    req_mutex.release()
+                if resp != None:
+                    return True
             else:
                 # Nothing new
                 pass
@@ -362,4 +368,7 @@ class pokeys_interface():
             outputs = list(map(sub, outputs_state, outputs))
             pk.connect(host)
             resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
-        return resp
+            if req_mutex.locked():
+                req_mutex.release()
+            if resp != None:
+                    return True
