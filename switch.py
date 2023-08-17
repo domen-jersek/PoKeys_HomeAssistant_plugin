@@ -248,30 +248,51 @@ class SwitchEntity(ToggleEntity):
     
     def turn_on(self): 
         pin = self._pin
-        pk.connect(self._host)
-        pk.set_output(int(pin)-1, 1)
-        #refrence entity turn on
-        self._inputs_updated.wait(timeout=None)
-        while self._hass.data.get("host_cycle", None) != self._host:
-            pass
-        
-        if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
-            self._state = True
-        self.schedule_update_ha_state()
+        if int(self._pin) > 55:
+            try:
+                pk.connect(self._host)
+                if pk.poextbus_on(int(self._pin)-56, self._host):
+                    self._state = True
+                else:
+                    logging.error("poextpin is on")
+            except:
+                logging.error("poextbus_on failed")
+        else:
+            pk.connect(self._host)
+            pk.set_output(int(pin)-1, 1)
+            #after selected pin is turned on wait for updated state
+            self._inputs_updated.wait(timeout=None)
+            while self._hass.data.get("host_cycle", None) != self._host:
+                pass
+            
+            if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
+                self._state = True
+            
+            self.schedule_update_ha_state()
 
 
     def turn_off(self):
         pin = self._pin
-        pk.connect(self._host)
-        pk.set_output(int(pin)-1, 0)
-        #refrence entity turn off
-        self._inputs_updated.wait(timeout=None)
-        while self._hass.data.get("host_cycle", None) != self._host:
-            pass
-        
-        if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
-            self._state = False
-        self.schedule_update_ha_state()
+        if int(self._pin) > 55:
+            try:
+                pk.connect(self._host)
+                if pk.poextbus_off(int(self._pin)-56, self._host):
+                    self._state = False
+                else:
+                    logging.error("poextbus pin is off")
+            except:
+                logging.error("poextbus_off failed")
+        else:
+            pk.connect(self._host)
+            pk.set_output(int(pin)-1, 0)
+            #after selected pin is turned off wait for updated state
+            self._inputs_updated.wait(timeout=None)
+            while self._hass.data.get("host_cycle", None) != self._host:
+                pass
+            
+            if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
+                self._state = False
+            self.schedule_update_ha_state()
 
     @property
     def device_class(self) -> SwitchDeviceClass | None:
