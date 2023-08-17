@@ -7,14 +7,16 @@ import netifaces
 import binascii
 import re
 import threading
+import _thread
 from operator import add, sub
 import logging
 
+#req_mutex = _thread.allocate_lock()
 req_mutex = threading.Lock()
 
 class pokeys_interface():
     def __init__(self):
-        self.client_pk = socket.socket(2, socket.SOCK_DGRAM, socket.IPPROTO_UDP) #socket.AF_INET
+        self.client_pk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) #socket.AF_INET  2
         self.connected = False
         
         self.POKEYS_PORT_COM = 20055
@@ -27,17 +29,35 @@ class pokeys_interface():
         self.inputs = [False] * 55
 
     def connect(self, address):
+        '''
+        if address == None:
+            return False
+        #print("Connecting to " + address)
+        self.client_pk.settimeout(1)
+        try:
+            self.client_pk.connect((str(address), self.POKEYS_PORT_COM))
+            
+            #self.connected = True
+            #return self.connected
+            return True
+            
+        except socket.timeout:
+            return False
+        '''
+        #return self.read_inputs()
+
         if address == None:
             return False
         #print("Connecting to " + address)
         self.client_pk.connect((address, self.POKEYS_PORT_COM))
         self.client_pk.settimeout(1)
+        
         self.connected = True
         return self.connected
-        #return self.read_inputs()
 
     def disconnect(self):
         #self.client.close()
+        #self.client_pk.shutdown()
         self.client_pk.close()
         #return
 
@@ -69,8 +89,10 @@ class pokeys_interface():
         try:
             for rety in range(3):
                 #print(f"Request: {command}")
-                self.client_pk.sendall(bytes(command))
+                #with req_mutex():
                 req_mutex.acquire()
+                self.client_pk.sendall(bytes(command))
+                #req_mutex.acquire()
                 response = self.client_pk.recv(1024)
                 
                 if response[6] == command[6]:
@@ -183,7 +205,7 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, [], []))
         if req_mutex.locked():
             req_mutex.release()
-    
+        #if resp != None:
         return resp
 
     def read_sensor_values(self, i):
@@ -198,13 +220,12 @@ class pokeys_interface():
         pk = pokeys_interface()
         pk.connect(host)
         i = int(id)
-
         packet = pk.read_sensor_values(i)
         valPacket = re.findall('..', binascii.hexlify(packet).decode())
         val_hex = str(valPacket[9])+str(valPacket[8])
         val = int(val_hex, base=16)/100
         return val
-
+        
     #function that searches every web interface by sending a broadcast packet, if a pokeys device exists it responds with that device serial is used as its id
     def device_discovery(self, serial_num_input):
         broadcast_address = '<broadcast>'
@@ -325,7 +346,6 @@ class pokeys_interface():
                 # Something new
                 outputs_state[i] |= outputs[i]
                 # send
-                pk.connect(host)
                 resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
                 if req_mutex.locked():
                     req_mutex.release()
@@ -334,7 +354,6 @@ class pokeys_interface():
             else:
                 # Nothing new
                 pass
-
 
     def poextbus_off(self, pin, host):
         pk = pokeys_interface()
@@ -355,7 +374,7 @@ class pokeys_interface():
                 # Something new
                 outputs_state[i] &= ~outputs[i]
                 # send
-                pk.connect(host)
+            
                 resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
                 if req_mutex.locked():
                     req_mutex.release()
@@ -366,7 +385,7 @@ class pokeys_interface():
                 pass
         if outputs == outputs_state:
             outputs = list(map(sub, outputs_state, outputs))
-            pk.connect(host)
+        
             resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
             if req_mutex.locked():
                 req_mutex.release()

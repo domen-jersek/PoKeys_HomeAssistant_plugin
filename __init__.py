@@ -20,6 +20,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from datetime import timedelta
 import threading
+
 from typing import TypedDict
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
@@ -83,41 +84,27 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
 
     for host in hosts:
         
-        pk.connect(host)
+        if pk.connect(host):
+            
+            if pk.read_inputs():
+                inputs =pk.inputs 
+                
+                ind = hosts.index(host)
+                inputs_hosts[ind] = inputs.copy()
 
-        pk.read_inputs()
+                hass.data["inputs"] = inputs_hosts
+                hass.data["hosts"] = hosts
+                hass.data["host_cycle"] = host
 
-        inputs =pk.inputs 
-        
-
-        ind = hosts.index(host)
-        inputs_hosts[ind] = inputs.copy()
-
-        hass.data["inputs"] = inputs_hosts
-        hass.data["hosts"] = hosts
-        hass.data["host_cycle"] = host
-        
-        #entity actions are blocked if their device is offline
-        if pk.connected:
-            inputs_updated.set()
-            inputs_updated.clear()
-        
-
-"""def read_sensor_cycle(hass: HomeAssistant, devices, sensors, sensors_list, id_list):
-    
-    for host in devices:
-        if serial in sensors:
-        for id in id_list:
-            if len(id_list)>len(sensors_list):
-                val = pk.sensor_readout(hass, host, id)
-                sensors_list.append(val)
-                logging.error(sensors_list)
+                inputs_updated.set()
+                inputs_updated.clear()
             else:
-                val = pk.sensor_readout(hass, host, id)
-                sensors_list[id] = val
-                logging.error(sensors_list)
-"""
-
+                logging.error("configured pokeys device not found")
+        #try: #check if device is alive
+        #    subprocess.run(["ping", "-c", "1", host], check=True)
+        #except subprocess.CalledProcessError:
+        #    logging.error("configured pokeys device not found")
+        
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the your_integration component."""
@@ -130,7 +117,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     entry = config[DOMAIN]
     hass.data["inputs_updated"] = inputs_updated
 
-    inputs_hosts = []    
+    inputs_hosts = []
     serial_list = []
 
     buttons = []
@@ -208,14 +195,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                         else:
                             logging.error("Sensors set up failed")
             except:
-                pass        
+                pass
         
         else:
             logging.error("Device " + serial + " not avalible")
 
+    
+
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 2 seconds
     read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts)
-    async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=2))
+    async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
 
     #load entity platforms
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
