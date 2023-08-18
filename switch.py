@@ -134,7 +134,7 @@ class PoKeys57E(SwitchEntity):
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         self._inputs = self._hass.data.get("inputs", None)
         
-        self._hosts = self._hass.data.get("hosts", None)
+        #self._hosts = self._hass.data.get("hosts", None)
         if pk.connect(self._host):
             try:
                 pk.set_pin_function(int(pin)-1, 4)
@@ -169,7 +169,7 @@ class PoKeys57E(SwitchEntity):
             while self._hass.data.get("host_cycle", None) != self._host:
                 pass
             
-            if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
+            if self._inputs[self._host][int(pin)-1]:
                 self._state = True
             
             self.schedule_update_ha_state()
@@ -194,7 +194,7 @@ class PoKeys57E(SwitchEntity):
             while self._hass.data.get("host_cycle", None) != self._host:
                 pass
             
-            if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
+            if self._inputs[self._host][int(pin)-1] == False:
                 self._state = False
             self.schedule_update_ha_state()
 

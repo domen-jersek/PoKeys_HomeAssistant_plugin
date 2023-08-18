@@ -80,7 +80,7 @@ def send_notification(hass: HomeAssistant, message):
     create(hass, message, "Found PoKeys device")     
 
 #this function reads inputs of every pokeys device inside configuration and wirites those inputs to homeassistant
-def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
+def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts, inputs_hosts_dict):
 
     for host in hosts:
         
@@ -92,18 +92,14 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts):
                 ind = hosts.index(host)
                 inputs_hosts[ind] = inputs.copy()
 
-                hass.data["inputs"] = inputs_hosts
-                hass.data["hosts"] = hosts
+                inputs_hosts_dict[host] = inputs_hosts[ind]
+                hass.data["inputs"] = inputs_hosts_dict
                 hass.data["host_cycle"] = host
-
+                                
                 inputs_updated.set()
                 inputs_updated.clear()
             else:
                 logging.error("configured pokeys device not found")
-        #try: #check if device is alive
-        #    subprocess.run(["ping", "-c", "1", host], check=True)
-        #except subprocess.CalledProcessError:
-        #    logging.error("configured pokeys device not found")
         
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -118,6 +114,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data["inputs_updated"] = inputs_updated
 
     inputs_hosts = []
+    inputs_hosts_dict = {}
     serial_list = []
 
     buttons = []
@@ -143,6 +140,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             inputs_hosts.append(host_inputs)
             serial_list.append(serial)
+
+            host_inputs_2 = []
+            inputs_hosts_dict["{0}".format(host)] = host_inputs_2
+            #inputs_hosts_2.append(host_inputs_2)
 
             try:
                 for entity_config in device_config["buttons"]:
@@ -200,10 +201,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             logging.error("Device " + serial + " not avalible")
 
-    
-
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 2 seconds
-    read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts)
+    read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
     async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
 
     #load entity platforms

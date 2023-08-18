@@ -138,7 +138,6 @@ class PoKeys57E(ButtonEntity):
         self._state = "released"
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         self._inputs = self._hass.data.get("inputs", None)
-        self._hosts = self._hass.data.get("hosts", None)
         self._host_cycle = self._hass.data.get("host_cycle", None)
 
     @property
@@ -184,7 +183,7 @@ class PoKeys57E(ButtonEntity):
         
         if int(self._pin) == 150:
             pk.connect(self._host)
-            pk.poextbus_off_all(self._host) #failsafe to turn off the whole poextbus in case of too many requests
+            pk.poextbus_off_all(self._host) # turn off the whole poextbus
         
         elif int(self._pin) > 55:
             try:
@@ -215,7 +214,7 @@ class PoKeys57E(ButtonEntity):
             while self._hass.data.get("host_cycle", None) != self._host:
                 pass
             
-            if self._inputs[self._hosts.index(self._host)][int(self._pin)-1]:
+            if self._inputs[self._host][int(self._pin)-1]:
                 self._state = "pressed"    
             
             time.sleep(int(delay)) #wait for selected time
@@ -228,7 +227,7 @@ class PoKeys57E(ButtonEntity):
             while self._hass.data.get("host_cycle", None) != self._host:
                 pass
             
-            if self._inputs[self._hosts.index(self._host)][int(self._pin)-1] == False:
+            if self._inputs[self._host][int(self._pin)-1] == False:
                 self._state = "released"
 
             _LOGGER.info("Custom button released.")
@@ -284,7 +283,6 @@ class ButtonEntity(RestoreEntity):
         self._state = "released"
         self._inputs_updated = self._hass.data.get("inputs_updated", None)
         self._inputs = self._hass.data.get("inputs", None)
-        self._hosts_index = self._hass.data.get("host_index", None)
         pk.connect(self._host)
         pk.set_pin_function(int(self._pin)-1, 4)
         pk.set_output(int(pin)-1, 0)
@@ -351,7 +349,7 @@ class ButtonEntity(RestoreEntity):
         
         if int(self._pin) == 150:
             pk.connect(self._host)
-            pk.poextbus_off_all(self._host) #turn off the whole poextbus
+            pk.poextbus_off_all(self._host) # turn off the whole poextbus
         
         elif int(self._pin) > 55:
             try:
@@ -382,7 +380,7 @@ class ButtonEntity(RestoreEntity):
             while self._hass.data.get("host_cycle", None) != self._host:
                 pass
             
-            if self._inputs[self._hosts.index(self._host)][int(self._pin)-1]:
+            if self._inputs[self._host][int(self._pin)-1]:
                 self._state = "pressed"    
             
             time.sleep(int(delay)) #wait for selected time
@@ -395,7 +393,7 @@ class ButtonEntity(RestoreEntity):
             while self._hass.data.get("host_cycle", None) != self._host:
                 pass
             
-            if self._inputs[self._hosts.index(self._host)][int(self._pin)-1] == False:
+            if self._inputs[self._host][int(self._pin)-1] == False:
                 self._state = "released"
 
             _LOGGER.info("Custom button released.")
