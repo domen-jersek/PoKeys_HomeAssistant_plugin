@@ -131,13 +131,11 @@ class pokeys_interface():
     def set_output(self, pin, state):
         if not self.connected:
             return False
-
         resp = self.send_request(self.prepare_command(0x40, pin, 0 if state else 1, 0, 0, [], []))
 
     def set_poled_channel(self, ch, state):
         if not self.connected:
             return False
-
         resp = self.send_request(self.prepare_command(0xE6, 0x20, ch, state, 0, [], []))
 
     def set_pin_function(self, pin, function):
@@ -145,15 +143,12 @@ class pokeys_interface():
             return False  #4=output, 2=input
 
         resp = self.send_request(self.prepare_command(0x10, pin, function, 0, 0, [], []))
-        #if req_mutex.locked():
-        #    req_mutex.release()
 
     #    p = struct.pack("II", int(blind.refPos * 600000 / 100), int(blind.refAngle * 10000 / 100))
     #    resp = self.send_request_control_node(self.prepare_command(0x50, blind.ID, p))        
     
     #def stop_blind(self, blind):
     #    resp = self.send_request_control_node(self.prepare_command(0x51, blind.ID, []))   
-    # 
 
     def read_pin_function(self, pin):
         resp = self.send_request(self.prepare_command(0x15, pin, 0, 0, 0, [], []))
@@ -163,32 +158,17 @@ class pokeys_interface():
 
         return res #2=input, 4=output
 
-    def get_input(self, pin):
-        resp = self.send_request(self.prepare_command(0x30, pin, 0, 0, 0, [], []))
-
-        state = list(resp[3:5])
-        binary_state = state[0]
-        if state[0] == 0:
-            print("off")
-        elif state[0] == 1:
-            print("on")
-        
-        return binary_state
-
     def read_digital_input(self, pin):
         resp = self.send_request(self.prepare_command(0x10, pin, 2, 0, 0, [0x40], []))
-        
         return self.get_input(pin)
 
     def sensor_setup(self, i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
         resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, [], []))
-        #if resp != None:
         return resp
 
     def read_sensor_values(self, i):
         resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [], []))
-        
         return resp
     
     #parsed response of read_sensor_values()
@@ -287,18 +267,10 @@ class pokeys_interface():
         return device_list
 
     def read_poextbus(self):
-        #resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
         resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
-
         l = list(resp)
-        # hex_string = ""
-        # j = 0
-        # for x in l:
-        #     if j == 8 or j == 18: hex_string += "|"
-        #     hex_string += hex(x).split("0x")[1].upper() + ","
-        #     j+=1
         
-        return l[8:18]#hex_string
+        return l[8:18]
 
     def poextbus_on(self, pin, host):
         pk = pokeys_interface()
@@ -313,7 +285,7 @@ class pokeys_interface():
         if pin % 8 == 0:
             outputs[pin//8] = 1
             outputs.reverse()
-            out_card_n = outputs.index(1)              
+            out_card_n = outputs.index(1)
 
         for i in range(len(outputs_state)):
             if (outputs_state[i] | outputs[i]) != outputs_state[i]:
@@ -360,8 +332,3 @@ class pokeys_interface():
             if resp != None:
                     return True
 
-    def poextbus_off_all(self, host):
-        pk = pokeys_interface()
-        pk.connect(host)
-        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
-        return True

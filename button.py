@@ -181,11 +181,7 @@ class PoKeys57E(ButtonEntity):
         pin = self._pin
         delay =self._delay
         
-        if int(self._pin) == 150:
-            pk.connect(self._host)
-            pk.poextbus_off_all(self._host) # turn off the whole poextbus
-        
-        elif int(self._pin) > 55:
+        if int(self._pin) > 55:
             try:
                 pk.connect(self._host)
                 if pk.poextbus_on(int(self._pin)-56, self._host):
@@ -347,11 +343,7 @@ class ButtonEntity(RestoreEntity):
         pin = self._pin
         delay =self._delay
         
-        if int(self._pin) == 150:
-            pk.connect(self._host)
-            pk.poextbus_off_all(self._host) # turn off the whole poextbus
-        
-        elif int(self._pin) > 55:
+        if int(self._pin) > 55:
             try:
                 pk.connect(self._host)
                 if pk.poextbus_on(int(self._pin)-56, self._host):
@@ -397,4 +389,3 @@ class ButtonEntity(RestoreEntity):
                 self._state = "released"
 
             _LOGGER.info("Custom button released.")
-        
