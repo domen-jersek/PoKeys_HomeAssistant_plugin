@@ -238,7 +238,7 @@ class PoKeys57E(BinarySensorEntity):
         self._pin = pin
         self._state = False
         self._inputs = self._hass.data.get("inputs", None)
-        self._inputs_updated = self._hass.data.get("inputs_updated", None)
+        #self._inputs_updated = self._hass.data.get("inputs_updated", None)
 
         pk.connect(self._host)
         #after initialization set the selected pin as an input
@@ -255,7 +255,7 @@ class PoKeys57E(BinarySensorEntity):
     
     async def async_update(self):
         
-        pk.connect(self._host)
+        #pk.connect(self._host)
         #set state based on the device inputs provided by the inputs update cycle
         self._state = self._inputs[self._host][int(self._pin)-1]
 
@@ -299,7 +299,7 @@ class BinarySensorEntity(Entity):
         self._pin = pin
         self._state = False
         self._inputs = self._hass.data.get("inputs", None)
-        self._inputs_updated = self._hass.data.get("inputs_updated", None)
+        #self._inputs_updated = self._hass.data.get("inputs_updated", None)
         pk.connect(self._host)
         #set pin as input
         pk.set_pin_function(int(self._pin)-1, 2)
@@ -322,7 +322,7 @@ class BinarySensorEntity(Entity):
         """Return true if the binary sensor is on."""
         
         pin = self._pin
-        pk.connect(self._host)
+        #pk.connect(self._host)
         #when the state of the pin is True homeassistant recives that as on, False is off
         if self._inputs[self._host][int(pin)-1]:
             return self._attr_is_on

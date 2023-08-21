@@ -305,7 +305,7 @@ class PoKeys57E(SensorEntity):
 
     async def async_update(self):
         """Update the sensor value."""
-        pk.connect(self._host)
+        #pk.connect(self._host)
         
         self._state = pk.sensor_readout(self._host, self._id)
         return self._state
@@ -419,7 +419,7 @@ class PoKeys57E(SensorEntity):
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
-        pk.connect(self._host)
+        #pk.connect(self._host)
         self._attr_native_value = pk.sensor_readout(self._host, self._id)
         
         return self._attr_native_value
@@ -449,7 +449,7 @@ class PoKeys57E(SensorEntity):
         native_unit_of_measurement = self.native_unit_of_measurement
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
-        pk.connect(self._host)
+        #pk.connect(self._host)
         value = pk.sensor_readout(self._host, self._id)
         
         
@@ -797,7 +797,7 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
         return sensor_options.get("suggested_display_precision")
 
     value = state.state
-    pk.connect(self._host)
+    #pk.connect(self._host)
     value = pk.sensor_readout(self._host, self._id)
     
     if (precision := display_precision()) is None:

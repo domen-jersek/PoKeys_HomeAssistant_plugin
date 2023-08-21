@@ -163,13 +163,13 @@ class PoKeys57E(SwitchEntity):
                 logging.error("poextbus_on failed")
         else:
             pk.connect(self._host)
-            pk.set_output(int(pin)-1, 1)
+            if pk.set_output(int(pin)-1, 1):
             #after selected pin is turned on wait for updated state
-            self._inputs_updated.wait(timeout=None)
-            while self._hass.data.get("host_cycle", None) != self._host:
-                pass
+            #self._inputs_updated.wait(timeout=None)
+            #while self._hass.data.get("host_cycle", None) != self._host:
+            #    pass
             
-            if self._inputs[self._host][int(pin)-1]:
+            #if self._inputs[self._host][int(pin)-1]:
                 self._state = True
             
             self.schedule_update_ha_state()
@@ -188,13 +188,13 @@ class PoKeys57E(SwitchEntity):
                 logging.error("poextbus_off failed")
         else:
             pk.connect(self._host)
-            pk.set_output(int(pin)-1, 0)
+            if pk.set_output(int(pin)-1, 0):
             #after selected pin is turned off wait for updated state
-            self._inputs_updated.wait(timeout=None)
-            while self._hass.data.get("host_cycle", None) != self._host:
-                pass
+            #self._inputs_updated.wait(timeout=None)
+            #while self._hass.data.get("host_cycle", None) != self._host:
+            #    pass
             
-            if self._inputs[self._host][int(pin)-1] == False:
+            #if self._inputs[self._host][int(pin)-1] == False:
                 self._state = False
             self.schedule_update_ha_state()
 
@@ -259,13 +259,13 @@ class SwitchEntity(ToggleEntity):
                 logging.error("poextbus_on failed")
         else:
             pk.connect(self._host)
-            pk.set_output(int(pin)-1, 1)
+            if pk.set_output(int(pin)-1, 1):
             #after selected pin is turned on wait for updated state
-            self._inputs_updated.wait(timeout=None)
-            while self._hass.data.get("host_cycle", None) != self._host:
-                pass
+            #self._inputs_updated.wait(timeout=None)
+            #while self._hass.data.get("host_cycle", None) != self._host:
+            #    pass
             
-            if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
+            #if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
                 self._state = True
             
             self.schedule_update_ha_state()
@@ -284,13 +284,13 @@ class SwitchEntity(ToggleEntity):
                 logging.error("poextbus_off failed")
         else:
             pk.connect(self._host)
-            pk.set_output(int(pin)-1, 0)
+            if pk.set_output(int(pin)-1, 0):
             #after selected pin is turned off wait for updated state
-            self._inputs_updated.wait(timeout=None)
-            while self._hass.data.get("host_cycle", None) != self._host:
-                pass
+            #self._inputs_updated.wait(timeout=None)
+            #while self._hass.data.get("host_cycle", None) != self._host:
+            #    pass
             
-            if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
+            #if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
                 self._state = False
             self.schedule_update_ha_state()
 

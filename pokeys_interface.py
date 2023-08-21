@@ -7,6 +7,7 @@ import netifaces
 import binascii
 import re
 import threading
+import logging
 
 class pokeys_interface():
     def __init__(self):
@@ -47,6 +48,7 @@ class pokeys_interface():
         self.client_pk.connect((address, self.POKEYS_PORT_COM))
         self.client_pk.settimeout(1)
         
+        #logging.error("connecting...")
         self.connected = True
         return self.connected
 
@@ -132,6 +134,7 @@ class pokeys_interface():
         if not self.connected:
             return False
         resp = self.send_request(self.prepare_command(0x40, pin, 0 if state else 1, 0, 0, [], []))
+        return True
 
     def set_poled_channel(self, ch, state):
         if not self.connected:
