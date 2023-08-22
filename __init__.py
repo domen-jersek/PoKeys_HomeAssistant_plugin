@@ -24,6 +24,7 @@ import threading
 from typing import TypedDict
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
+import psutil
 
 
 pk = pokeys_interface()
@@ -81,26 +82,24 @@ def send_notification(hass: HomeAssistant, message):
 
 #this function reads inputs of every pokeys device inside configuration and wirites those inputs to homeassistant
 def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts, inputs_hosts_dict):
-
     for host in hosts:
         
-        if pk.connect(host):
+        pk.connect(host)
+        if pk.read_inputs():
+            inputs =pk.inputs 
             
-            if pk.read_inputs():
-                inputs =pk.inputs 
-                
-                ind = hosts.index(host)
-                inputs_hosts[ind] = inputs.copy()
+            ind = hosts.index(host)
+            inputs_hosts[ind] = inputs.copy()
 
-                inputs_hosts_dict[host] = inputs_hosts[ind]
-                hass.data["inputs"] = inputs_hosts_dict
-                hass.data["host_cycle"] = host
-                                
-                inputs_updated.set()
-                inputs_updated.clear()
-            else:
-                logging.error("configured pokeys device not found")
-        
+            inputs_hosts_dict[host] = inputs_hosts[ind]
+            hass.data["inputs"] = inputs_hosts_dict
+            hass.data["host_cycle"] = host
+
+            
+            inputs_updated.set()
+            inputs_updated.clear()
+        else:
+            logging.error("configured pokeys device not found")
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the your_integration component."""
@@ -109,6 +108,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     
     devices = []
     hass.data["devices"] = devices
+    devices_serial = []
         
     entry = config[DOMAIN]
     hass.data["inputs_updated"] = inputs_updated
@@ -116,6 +116,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     inputs_hosts = []
     inputs_hosts_dict = {}
     serial_list = []
+    device_sockets = {}
 
     buttons = []
     switches = []
@@ -125,6 +126,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data["switches"] = switches
     hass.data["sensors"] = sensors
     hass.data["binary_sensors"] = binary_sensors
+
+    hass.data["connect"] = pk.connect
     
     #read the configuration tree of devices
     for device_config in entry["devices"]: 
@@ -132,10 +135,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         serial = device_config["serial"]
         host = pk.device_discovery(serial)
         inputs = []
+        
 
         if pk.connect(host):
             #entity listing that will be passed to entity files for initialization
             devices.append(host)
+            devices_serial.append(int(serial))
             host_inputs = []
             
             inputs_hosts.append(host_inputs)
@@ -201,6 +206,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             logging.error("Device " + serial + " not avalible")
 
+    
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 2 seconds
     read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
     async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
@@ -214,6 +220,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     #discovered devices notifications at startup
     if pk.new_device_notify() != None:
         for device in pk.new_device_notify():
-            send_notification(hass, "Discovered PoKeys device with serial number " + str(device))
+            if (device in devices_serial) == False:
+                send_notification(hass, "Discovered PoKeys device with serial number " + str(device))
         
     return True
