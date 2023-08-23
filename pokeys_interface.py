@@ -10,7 +10,7 @@ import threading
 import logging
 
 class pokeys_interface():
-    def __init__(self):
+    def __init__(self, host):
         self.client_pk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) #socket.AF_INET  2
         self.connected = False
         self.req_mutex = threading.Lock()
@@ -23,25 +23,9 @@ class pokeys_interface():
         self.requestID = random.randint(0, 255)
 
         self.inputs = [False] * 55
+        self.connect(host)
 
     def connect(self, address):
-        '''
-        if address == None:
-            return False
-        #print("Connecting to " + address)
-        self.client_pk.settimeout(1)
-        try:
-            self.client_pk.connect((str(address), self.POKEYS_PORT_COM))
-            
-            #self.connected = True
-            #return self.connected
-            return True
-            
-        except socket.timeout:
-            return False
-        '''
-        #return self.read_inputs()
-
         if address == None:
             return False
         #print("Connecting to " + address)

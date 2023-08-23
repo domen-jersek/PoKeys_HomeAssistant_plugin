@@ -68,11 +68,7 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-
 _LOGGER = logging.getLogger("pokeys")
-
-#threading event acting as mutex to prevent skipping updated states
-
 
 def send_notification(hass: HomeAssistant, message):
     #creates a new notification with title "Found PoKeys device"
@@ -83,7 +79,6 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts, i
     for host in hosts:
         
         instance = hass.data.get("instance"+str(host), None)
-        instance.connect(host)
         if instance.read_inputs():
             inputs = instance.inputs 
             
@@ -217,7 +212,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if host != None:
             #entity listing that will be passed to entity files for initialization
             
-            hass.data["instance"+str(host)] = pokeys_interface()
+            hass.data["instance"+str(host)] = pokeys_interface(host)
             current_instance = hass.data.get("instance"+str(host), None)
 
             devices.append(host)
@@ -229,7 +224,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             host_inputs_2 = []
             inputs_hosts_dict["{0}".format(host)] = host_inputs_2
-            #inputs_hosts_2.append(host_inputs_2)
 
             try:
                 for entity_config in device_config["buttons"]:
@@ -287,7 +281,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             logging.error("Device " + serial + " not avalible")
     
-    #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 2 seconds
+    #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
     read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
     async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
 

@@ -28,7 +28,6 @@ from homeassistant.util import dt as dt_util
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_NAME
 from homeassistant.const import CONF_PIN
-from custom_components import pokeys
 
 _LOGGER = logging.getLogger("pokeys")
 
@@ -211,7 +210,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                 async_add_entities([
                     PoKeys57E(
                         hass,
-                        hass.data.get("instance"+str(binary_sensor["serial"]), None),
+                        hass.data.get("instance"+str(binary_sensor["serial"]), None),#get the instance of the device
                         binary_sensor["name"],
                         binary_sensor["serial"],
                         binary_sensor["pin"]
@@ -236,7 +235,6 @@ class PoKeys57E(BinarySensorEntity):
         self._state = False
         self._inputs = self._hass.data.get("inputs", None)
         #after initialization set the selected pin as an input
-        self._binary_sensor.connect(self._host)
         self._binary_sensor.set_pin_function(int(self._pin)-1, 2)
         
 
@@ -294,7 +292,6 @@ class BinarySensorEntity(Entity):
         self._state = False
         self._inputs = self._hass.data.get("inputs", None)
         #set pin as input
-        self._binary_sensor.connect(self._host)
         self._binary_sensor.set_pin_function(int(self._pin)-1, 2)
 
     @property

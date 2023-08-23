@@ -42,7 +42,6 @@ from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 from homeassistant.helpers.typing import UNDEFINED, ConfigType, StateType, UndefinedType
 from homeassistant.util import dt as dt_util
 from homeassistant.util.enum import try_parse_enum
-from custom_components import pokeys
 from datetime import timedelta
 
 from homeassistant.components.sensor import DOMAIN
@@ -146,7 +145,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                 async_add_entities([
                     PoKeys57E(
                         hass,
-                        hass.data.get("instance"+str(sensor["serial"]), None),
+                        hass.data.get("instance"+str(sensor["serial"]), None),#get the instance of the device
                         sensor["name"],
                         sensor["serial"],
                         sensor["pin"]
@@ -218,8 +217,6 @@ class PoKeys57E(SensorEntity):
         self._name = name
         self._id = id
         self._attr_state_class = STATE_CLASS_MEASUREMENT
-        self._sensor.connect(self._host)
-        
         
     @callback
     def add_to_platform_start(

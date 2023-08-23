@@ -98,7 +98,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
             async_add_entities([
                 PoKeys57E(
                     hass,
-                    hass.data.get("instance"+str(button["serial"]), None),
+                    hass.data.get("instance"+str(button["serial"]), None),#get the instance of the device
                     button["name"],
                     button["serial"],
                     button["pin"],
@@ -131,8 +131,6 @@ class PoKeys57E(ButtonEntity):
         self._delay = delay
         
         self._state = "released"
-        self._button.connect(self._host)
-        
         
 
     @property
@@ -162,7 +160,6 @@ class PoKeys57E(ButtonEntity):
 
         _LOGGER.info("Custom button entity added to Home Assistant.")
         
-
     
     async def async_will_remove_from_hass(self):
         """Perform any actions when the button entity is removed from Home Assistant."""
@@ -250,7 +247,6 @@ class ButtonEntity(RestoreEntity):
         self._delay = delay
         
         self._state = "released"
-        self._button.connect(self._host)
 
     @property
     def name(self):

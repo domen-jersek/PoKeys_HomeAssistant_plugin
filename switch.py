@@ -96,7 +96,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                 async_add_entities([
                     PoKeys57E(
                         hass,
-                        hass.data.get("instance"+str(switch["serial"]), None),
+                        hass.data.get("instance"+str(switch["serial"]), None),#get the instance of the device
                         switch["name"],
                         switch["serial"],
                         switch["pin"]
@@ -127,13 +127,11 @@ class PoKeys57E(SwitchEntity):
         self._name = name  
         self._pin = pin
         self._state = None
-        
-        if self._switch.connect(self._host):
-            try:
-                self._switch.set_pin_function(int(pin)-1, 4)
-                self._switch.set_output(int(pin)-1, 0)
-            except:
-                pass
+        try:
+            self._switch.set_pin_function(int(pin)-1, 4)
+            self._switch.set_output(int(pin)-1, 0)
+        except:
+            pass
         #set the selected pin as output
 
     @property
@@ -154,6 +152,7 @@ class PoKeys57E(SwitchEntity):
         else:
             
             if self._switch.set_output(int(pin)-1, 1):
+            #after selected pin is turned on wait for updated state
                 self._state = True
             
             self.schedule_update_ha_state()
@@ -168,6 +167,7 @@ class PoKeys57E(SwitchEntity):
                 logging.error("poextbus pin is off")
         else:
             if self._switch.set_output(int(pin)-1, 0):
+            #after selected pin is turned off wait for updated state
                 self._state = False
             self.schedule_update_ha_state()
 
@@ -204,13 +204,11 @@ class SwitchEntity(ToggleEntity):
         self._name = name  
         self._pin = pin
         self._state = None
-        
-        if self._switch.connect(self._host):
-            try:
-                self._switch.set_pin_function(int(pin)-1, 4)
-                self._switch.set_output(int(pin)-1, 0)
-            except:
-                pass
+        try:
+            self._switch.set_pin_function(int(pin)-1, 4)
+            self._switch.set_output(int(pin)-1, 0)
+        except:
+            pass
         #set the selected pin as output
 
     @property
@@ -230,6 +228,7 @@ class SwitchEntity(ToggleEntity):
                 logging.error("poextpin is on")
         else:
             if self._switch.set_output(int(pin)-1, 1):
+            #after selected pin is turned on wait for updated state
                 self._state = True
             
             self.schedule_update_ha_state()
@@ -244,6 +243,7 @@ class SwitchEntity(ToggleEntity):
                 logging.error("poextbus pin is off")
         else:
             if self._switch.set_output(int(pin)-1, 0):
+            #after selected pin is turned off wait for updated state
                 self._state = False
             self.schedule_update_ha_state()
 
