@@ -6,7 +6,6 @@ import logging
 
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
-from .pokeys import pokeys_instance
 from pprint import pformat
 from homeassistant.backports.enum import StrEnum
 from homeassistant.config_entries import ConfigEntry
@@ -24,18 +23,14 @@ from homeassistant.helpers.entity import ToggleEntity, ToggleEntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
-from custom_components import pokeys
 from homeassistant.components.switch import DOMAIN
 
 SCAN_INTERVAL = timedelta(seconds=1)
-
-from .pokeys_interface import pokeys_interface
 
 _LOGGER = logging.getLogger("pokeys")
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
-pk = pokeys_interface()
 
 DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
@@ -101,6 +96,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                 async_add_entities([
                     PoKeys57E(
                         hass,
+                        hass.data.get("instance"+str(switch["serial"]), None),
                         switch["name"],
                         switch["serial"],
                         switch["pin"]
@@ -122,22 +118,20 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 class PoKeys57E(SwitchEntity):
 
-    def __init__(self, hass, name, host, pin): 
+    def __init__(self, hass, switch_instance, name, host, pin): 
         #initialization for SwitchEntity
         self._host = host
-        self._switch = pokeys_instance(self._host)
+        self._switch = switch_instance
 
         self._hass = hass
         self._name = name  
         self._pin = pin
         self._state = None
-        self._inputs_updated = self._hass.data.get("inputs_updated", None)
-        self._inputs = self._hass.data.get("inputs", None)
         
-        #self._hosts = self._hass.data.get("hosts", None)
-        if pk.connect(self._host):
+        if self._switch.connect(self._host):
             try:
-                pk.set_pin_function(int(pin)-1, 4)
+                self._switch.set_pin_function(int(pin)-1, 4)
+                self._switch.set_output(int(pin)-1, 0)
             except:
                 pass
         #set the selected pin as output
@@ -153,23 +147,13 @@ class PoKeys57E(SwitchEntity):
     def turn_on(self): 
         pin = self._pin
         if int(self._pin) > 55:
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_on(int(self._pin)-56, self._host):
-                    self._state = True
-                else:
-                    logging.error("poextpin is on")
-            except:
-                logging.error("poextbus_on failed")
+            if self._switch.poextbus_on(int(self._pin)-56):
+                self._state = True
+            else:
+                logging.error("poextpin is on")
         else:
-            pk.connect(self._host)
-            if pk.set_output(int(pin)-1, 1):
-            #after selected pin is turned on wait for updated state
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
             
-            #if self._inputs[self._host][int(pin)-1]:
+            if self._switch.set_output(int(pin)-1, 1):
                 self._state = True
             
             self.schedule_update_ha_state()
@@ -178,23 +162,12 @@ class PoKeys57E(SwitchEntity):
     def turn_off(self):
         pin = self._pin
         if int(self._pin) > 55:
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_off(int(self._pin)-56, self._host):
-                    self._state = False
-                else:
-                    logging.error("poextbus pin is off")
-            except:
-                logging.error("poextbus_off failed")
+            if self._switch.poextbus_off(int(self._pin)-56):
+                self._state = False
+            else:
+                logging.error("poextbus pin is off")
         else:
-            pk.connect(self._host)
-            if pk.set_output(int(pin)-1, 0):
-            #after selected pin is turned off wait for updated state
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
-            
-            #if self._inputs[self._host][int(pin)-1] == False:
+            if self._switch.set_output(int(pin)-1, 0):
                 self._state = False
             self.schedule_update_ha_state()
 
@@ -222,21 +195,23 @@ class SwitchEntity(ToggleEntity):
     entity_description: SwitchEntityDescription
     _attr_device_class: SwitchDeviceClass | None
 
-    def __init__(self, hass, name, host, pin): 
+    def __init__(self, hass, switch_instance, name, host, pin): 
         #refrence entity initialization
         self._host = host
-        self._switch = pokeys_instance(self._host)
+        self._switch = switch_instance
 
         self._hass = hass
         self._name = name  
         self._pin = pin
         self._state = None
-        self._inputs_updated = self._hass.data.get("inputs_updated", None)
-        self._inputs = self._hass.data.get("inputs", None)
         
-        self._hosts = self._hass.data.get("hosts", None)
-        pk.connect(self._host)
-        pk.set_pin_function(int(pin)-1, 4)
+        if self._switch.connect(self._host):
+            try:
+                self._switch.set_pin_function(int(pin)-1, 4)
+                self._switch.set_output(int(pin)-1, 0)
+            except:
+                pass
+        #set the selected pin as output
 
     @property
     def name(self):
@@ -249,23 +224,12 @@ class SwitchEntity(ToggleEntity):
     def turn_on(self): 
         pin = self._pin
         if int(self._pin) > 55:
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_on(int(self._pin)-56, self._host):
-                    self._state = True
-                else:
-                    logging.error("poextpin is on")
-            except:
-                logging.error("poextbus_on failed")
+            if self._switch.poextbus_on(int(self._pin)-56):
+                self._state = True
+            else:
+                logging.error("poextpin is on")
         else:
-            pk.connect(self._host)
-            if pk.set_output(int(pin)-1, 1):
-            #after selected pin is turned on wait for updated state
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
-            
-            #if self._inputs[self._hosts.index(self._host)][int(pin)-1]:
+            if self._switch.set_output(int(pin)-1, 1):
                 self._state = True
             
             self.schedule_update_ha_state()
@@ -274,23 +238,12 @@ class SwitchEntity(ToggleEntity):
     def turn_off(self):
         pin = self._pin
         if int(self._pin) > 55:
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_off(int(self._pin)-56, self._host):
-                    self._state = False
-                else:
-                    logging.error("poextbus pin is off")
-            except:
-                logging.error("poextbus_off failed")
+            if self._switch.poextbus_off(int(self._pin)-56):
+                self._state = False
+            else:
+                logging.error("poextbus pin is off")
         else:
-            pk.connect(self._host)
-            if pk.set_output(int(pin)-1, 0):
-            #after selected pin is turned off wait for updated state
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
-            
-            #if self._inputs[self._hosts.index(self._host)][int(pin)-1] == False:
+            if self._switch.set_output(int(pin)-1, 0):
                 self._state = False
             self.schedule_update_ha_state()
 

@@ -68,12 +68,8 @@ from .const import (  # noqa: F401
     SensorDeviceClass,
     SensorStateClass,
 )
-
-from .pokeys import pokeys_instance
-from .pokeys_interface import pokeys_interface
 from .websocket_api import async_setup as async_setup_ws_api
 
-pk = pokeys_interface()
 
 _LOGGER = logging.getLogger("pokeys")
 DOMAIN = "pokeys"
@@ -150,6 +146,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                 async_add_entities([
                     PoKeys57E(
                         hass,
+                        hass.data.get("instance"+str(sensor["serial"]), None),
                         sensor["name"],
                         sensor["serial"],
                         sensor["pin"]
@@ -212,15 +209,16 @@ class PoKeys57E(SensorEntity):
     _sensor_option_display_precision: int | None = None
     _sensor_option_unit_of_measurement: str | None | UndefinedType = UNDEFINED
 
-    def __init__(self, hass, name, host, id):
+    def __init__(self, hass, sensor_instance, name, host, id):
         #initialization of sensor entity
         self._host = host
-        self._sensor = pokeys_instance(self._host)
+        self._sensor = sensor_instance
         self._hass = hass
         
         self._name = name
         self._id = id
         self._attr_state_class = STATE_CLASS_MEASUREMENT
+        self._sensor.connect(self._host)
         
         
     @callback
@@ -305,9 +303,8 @@ class PoKeys57E(SensorEntity):
 
     async def async_update(self):
         """Update the sensor value."""
-        #pk.connect(self._host)
         
-        self._state = pk.sensor_readout(self._host, self._id)
+        self._state = self._sensor.sensor_readout(self._id)
         return self._state
 
 
@@ -419,8 +416,7 @@ class PoKeys57E(SensorEntity):
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
-        #pk.connect(self._host)
-        self._attr_native_value = pk.sensor_readout(self._host, self._id)
+        self._attr_native_value = self._sensor.sensor_readout(self._id)
         
         return self._attr_native_value
 
@@ -450,7 +446,7 @@ class PoKeys57E(SensorEntity):
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
         #pk.connect(self._host)
-        value = pk.sensor_readout(self._host, self._id)
+        value = self._sensor.sensor_readout(self._id)
         
         
         # For the sake of validation, we can ignore custom device classes
@@ -797,8 +793,7 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
         return sensor_options.get("suggested_display_precision")
 
     value = state.state
-    #pk.connect(self._host)
-    value = pk.sensor_readout(self._host, self._id)
+    value = self._sensor.sensor_readout(self._id)
     
     if (precision := display_precision()) is None:
         return value

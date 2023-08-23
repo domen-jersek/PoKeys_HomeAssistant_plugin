@@ -20,14 +20,13 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from datetime import timedelta
 import threading
-
+import netifaces
+import socket
+import binascii
 from typing import TypedDict
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
 import psutil
-
-
-pk = pokeys_interface()
 
 #keywords in config
 DOMAIN = "pokeys"
@@ -73,7 +72,6 @@ CONFIG_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger("pokeys")
 
 #threading event acting as mutex to prevent skipping updated states
-inputs_updated = threading.Event()
 
 
 def send_notification(hass: HomeAssistant, message):
@@ -84,9 +82,10 @@ def send_notification(hass: HomeAssistant, message):
 def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts, inputs_hosts_dict):
     for host in hosts:
         
-        pk.connect(host)
-        if pk.read_inputs():
-            inputs =pk.inputs 
+        instance = hass.data.get("instance"+str(host), None)
+        instance.connect(host)
+        if instance.read_inputs():
+            inputs = instance.inputs 
             
             ind = hosts.index(host)
             inputs_hosts[ind] = inputs.copy()
@@ -94,12 +93,93 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts, i
             inputs_hosts_dict[host] = inputs_hosts[ind]
             hass.data["inputs"] = inputs_hosts_dict
             hass.data["host_cycle"] = host
-
-            
-            inputs_updated.set()
-            inputs_updated.clear()
+        
         else:
             logging.error("configured pokeys device not found")
+
+def new_device_notify():
+        device_list = []
+        broadcast_address = '<broadcast>'
+        port = 20055
+        message = b'Discovery request'
+        interfaces = netifaces.interfaces()
+        for interface in interfaces:
+            try:
+                addresses = netifaces.ifaddresses(interface)
+                if netifaces.AF_INET in addresses:
+                    ipv4_addresses = addresses[netifaces.AF_INET]
+                    for address_info in ipv4_addresses:
+                        ip_address = address_info['addr']
+                        ip_int = socket.inet_aton(ip_address).hex()
+                        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        try:
+                            udp_socket.bind((ip_address, 0))
+                        except: socket.error
+                        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                        udp_socket.sendto(message, (broadcast_address, port))
+                        udp_socket.settimeout(2)
+                        while True:
+                            try:
+                                data, address = udp_socket.recvfrom(1024)
+                                serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
+                                serial_num_dec = int(serial_num_hex, 16)
+                                device_list.append(serial_num_dec)
+                            except socket.timeout:
+                                break
+                        udp_socket.close()
+            except ValueError:
+                pass 
+        return device_list
+
+#function that searches every web interface by sending a broadcast packet, if a pokeys device exists it responds with that device serial is used as its id
+def device_discovery(serial_num_input):
+    broadcast_address = '<broadcast>'
+    port = 20055
+
+    message = b'Discovery request'
+
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        try:
+            # Get the addresses for the interface
+            addresses = netifaces.ifaddresses(interface)
+            # Check if the interface has an IPv4 address
+            if netifaces.AF_INET in addresses:
+                ipv4_addresses = addresses[netifaces.AF_INET]
+
+                for address_info in ipv4_addresses:
+                    ip_address = address_info['addr']
+                    ip_int = socket.inet_aton(ip_address).hex()
+                    # Create a UDP socket
+                    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    #print(ip_address)
+
+                    try:
+                        udp_socket.bind((ip_address, 0))
+                    except: socket.error
+                    
+                    # Set the socket to allow broadcasting
+                    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    # Send the message to the broadcast address
+                    udp_socket.sendto(message, (broadcast_address, port))
+
+                    udp_socket.settimeout(2)
+                    # Listen for responses
+                    while True:
+                        try:
+                            data, address = udp_socket.recvfrom(1024)
+                            serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
+                            serial_num_dec = int(serial_num_hex, 16)
+                            if str(serial_num_dec) == serial_num_input:
+                                return address[0]
+
+                        except socket.timeout:
+                            break
+                    
+                    udp_socket.close()
+                    
+        except ValueError:
+            pass 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the your_integration component."""
@@ -111,7 +191,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     devices_serial = []
         
     entry = config[DOMAIN]
-    hass.data["inputs_updated"] = inputs_updated
 
     inputs_hosts = []
     inputs_hosts_dict = {}
@@ -126,19 +205,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data["switches"] = switches
     hass.data["sensors"] = sensors
     hass.data["binary_sensors"] = binary_sensors
-
-    hass.data["connect"] = pk.connect
     
     #read the configuration tree of devices
     for device_config in entry["devices"]: 
         name = device_config["name"]
         serial = device_config["serial"]
-        host = pk.device_discovery(serial)
+        host = device_discovery(serial)
         inputs = []
         
 
-        if pk.connect(host):
+        if host != None:
             #entity listing that will be passed to entity files for initialization
+            
+            hass.data["instance"+str(host)] = pokeys_interface()
+            current_instance = hass.data.get("instance"+str(host), None)
+
             devices.append(host)
             devices_serial.append(int(serial))
             host_inputs = []
@@ -196,7 +277,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             #EasySensor setup
             try:
                 if (len(entity_sensor) > 0):
-                        if pk.sensor_setup(0):
+                        if current_instance.sensor_setup(0):
                             _LOGGER.info("EasySensors set up")
                         else:
                             logging.error("Sensors set up failed")
@@ -205,7 +286,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         
         else:
             logging.error("Device " + serial + " not avalible")
-
     
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 2 seconds
     read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
@@ -218,8 +298,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
 
     #discovered devices notifications at startup
-    if pk.new_device_notify() != None:
-        for device in pk.new_device_notify():
+    if new_device_notify() != None:
+        for device in new_device_notify():
             if (device in devices_serial) == False:
                 send_notification(hass, "Discovered PoKeys device with serial number " + str(device))
         

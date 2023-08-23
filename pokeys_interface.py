@@ -47,7 +47,6 @@ class pokeys_interface():
         #print("Connecting to " + address)
         self.client_pk.connect((address, self.POKEYS_PORT_COM))
         self.client_pk.settimeout(1)
-        
         #logging.error("connecting...")
         self.connected = True
         return self.connected
@@ -168,106 +167,20 @@ class pokeys_interface():
     def sensor_setup(self, i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
         resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, [], []))
-        return resp
+        return True
 
     def read_sensor_values(self, i):
         resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [], []))
         return resp
     
     #parsed response of read_sensor_values()
-    def sensor_readout(self, host, id):
-        pk = pokeys_interface()
-        pk.connect(host)
+    def sensor_readout(self, id):
         i = int(id)
-        packet = pk.read_sensor_values(i)
+        packet = self.read_sensor_values(i)
         valPacket = re.findall('..', binascii.hexlify(packet).decode())
         val_hex = str(valPacket[9])+str(valPacket[8])
         val = int(val_hex, base=16)/100
         return val
-        
-    #function that searches every web interface by sending a broadcast packet, if a pokeys device exists it responds with that device serial is used as its id
-    def device_discovery(self, serial_num_input):
-        broadcast_address = '<broadcast>'
-        port = 20055
-
-        message = b'Discovery request'
-
-        interfaces = netifaces.interfaces()
-        for interface in interfaces:
-            try:
-                # Get the addresses for the interface
-                addresses = netifaces.ifaddresses(interface)
-                # Check if the interface has an IPv4 address
-                if netifaces.AF_INET in addresses:
-                    ipv4_addresses = addresses[netifaces.AF_INET]
-
-                    for address_info in ipv4_addresses:
-                        ip_address = address_info['addr']
-                        ip_int = socket.inet_aton(ip_address).hex()
-                        # Create a UDP socket
-                        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        #print(ip_address)
-
-                        try:
-                            udp_socket.bind((ip_address, 0))
-                        except: socket.error
-                        
-                        # Set the socket to allow broadcasting
-                        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                        # Send the message to the broadcast address
-                        udp_socket.sendto(message, (broadcast_address, port))
-
-                        udp_socket.settimeout(2)
-                        # Listen for responses
-                        while True:
-                            try:
-                                data, address = udp_socket.recvfrom(1024)
-                                serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
-                                serial_num_dec = int(serial_num_hex, 16)
-                                if str(serial_num_dec) == serial_num_input:
-                                    return address[0]
-
-                            except socket.timeout:
-                                break
-                        
-                        udp_socket.close()
-                        
-            except ValueError:
-                pass 
-
-    def new_device_notify(self):
-        device_list = []
-        broadcast_address = '<broadcast>'
-        port = 20055
-        message = b'Discovery request'
-        interfaces = netifaces.interfaces()
-        for interface in interfaces:
-            try:
-                addresses = netifaces.ifaddresses(interface)
-                if netifaces.AF_INET in addresses:
-                    ipv4_addresses = addresses[netifaces.AF_INET]
-                    for address_info in ipv4_addresses:
-                        ip_address = address_info['addr']
-                        ip_int = socket.inet_aton(ip_address).hex()
-                        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        try:
-                            udp_socket.bind((ip_address, 0))
-                        except: socket.error
-                        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                        udp_socket.sendto(message, (broadcast_address, port))
-                        udp_socket.settimeout(2)
-                        while True:
-                            try:
-                                data, address = udp_socket.recvfrom(1024)
-                                serial_num_hex = binascii.hexlify(data[15:16]).decode() + binascii.hexlify(data[14:15]).decode()
-                                serial_num_dec = int(serial_num_hex, 16)
-                                device_list.append(serial_num_dec)
-                            except socket.timeout:
-                                break
-                        udp_socket.close()
-            except ValueError:
-                pass 
-        return device_list
 
     def read_poextbus(self):
         resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
@@ -275,11 +188,9 @@ class pokeys_interface():
         
         return l[8:18]
 
-    def poextbus_on(self, pin, host):
-        pk = pokeys_interface()
+    def poextbus_on(self, pin):
         outputs = 10 *[0]
-        pk.connect(host)
-        outputs_state = pk.read_poextbus()
+        outputs_state = self.read_poextbus()
         for out_card in range(9,0,-1):
             if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
                 outputs[out_card] = 1 << (pin % 8)
@@ -302,11 +213,9 @@ class pokeys_interface():
                 # Nothing new
                 pass
 
-    def poextbus_off(self, pin, host):
-        pk = pokeys_interface()
+    def poextbus_off(self, pin):
         outputs = 10 *[0]
-        pk.connect(host)
-        outputs_state = pk.read_poextbus()
+        outputs_state = self.read_poextbus()
         for out_card in range(9,0,-1):
             if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
                 outputs[out_card] = 1 << (pin % 8)

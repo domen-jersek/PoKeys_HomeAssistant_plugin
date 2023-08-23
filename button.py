@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
-from .pokeys import pokeys_instance
 from homeassistant.core import HomeAssistant
 
 from pprint import pformat
@@ -26,8 +25,6 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity import EntityDescription
 from typing import TypedDict, Literal, final
 import time
-from custom_components import pokeys
-from .pokeys_interface import pokeys_interface
 
 #configuration keywords
 CONF_SERIAL = "serial"
@@ -56,8 +53,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.Optional(CONF_PIN): cv.string,
         vol.Optional(CONF_DELAY): cv.string,
 })
-
-pk = pokeys_interface()
 
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None): #hass, config, async_add_entities, discovery_info=None
     """Set up the custom button platform."""
@@ -103,6 +98,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
             async_add_entities([
                 PoKeys57E(
                     hass,
+                    hass.data.get("instance"+str(button["serial"]), None),
                     button["name"],
                     button["serial"],
                     button["pin"],
@@ -124,10 +120,10 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 
 class PoKeys57E(ButtonEntity):
-    def __init__(self, hass, name, host, pin, delay):
+    def __init__(self, hass, button_instance, name, host, pin, delay):
         """Initialize the button entity."""
         self._host = host
-        self._button = pokeys_instance(self._host)
+        self._button = button_instance
 
         self._hass = hass
         self._name = name
@@ -135,10 +131,9 @@ class PoKeys57E(ButtonEntity):
         self._delay = delay
         
         self._state = "released"
-        self._inputs_updated = self._hass.data.get("inputs_updated", None)
-        self._inputs = self._hass.data.get("inputs", None)
-        self._host_cycle = self._hass.data.get("host_cycle", None)
-        pk.connect(self._host)
+        self._button.connect(self._host)
+        
+        
 
     @property
     def name(self):
@@ -158,13 +153,11 @@ class PoKeys57E(ButtonEntity):
     
     async def async_added_to_hass(self):
         """Perform any actions when the button entity is added to Home Assistant."""
-        
-        if pk.connect(self._host):
-            try:
-                pk.set_pin_function(int(self._pin)-1, 4)
-                pk.set_output(int(self._pin)-1, 0)
-            except:
-                pass
+        try:
+            self._button.set_pin_function(int(self._pin)-1, 4)
+            self._button.set_output(int(pin)-1, 0)
+        except:
+            pass
         #when button entity is added to HA set the configured pin as output and turn it off
 
         _LOGGER.info("Custom button entity added to Home Assistant.")
@@ -182,48 +175,27 @@ class PoKeys57E(ButtonEntity):
         delay =self._delay
         
         if int(self._pin) > 55:
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_on(int(self._pin)-56, self._host):
-                    self._state = "pressed"
-                else:
-                    logging.error("poextbus pin is on")
-            except:
-                logging.error("poextbus_on failed")
-            
+            if self._button.poextbus_on(int(self._pin)-56):
+                self._state = "pressed"
+            else:
+                logging.error("poextbus pin is alredy on")
+        
             time.sleep(int(delay))
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_off(int(self._pin)-56, self._host):
-                    self._state = "released"
-                else:
-                    logging.error("poextbus pin is off")
-            except:
-                logging.error("poextbus_off failed")
-            
+        
+            if self._button.poextbus_off(int(self._pin)-56):
+                self._state = "released"
+            else:
+                logging.error("poextbus pin is alredy off")
+        
         else:
-            pk.connect(self._host)
             #turn the selected pin on and listen for change of state
-            if pk.set_output(int(pin)-1, 1):
-            
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
-            
-            #if self._inputs[self._host][int(self._pin)-1]:
+            if self._button.set_output(int(pin)-1, 1):
                 self._state = "pressed"    
             
             time.sleep(int(delay)) #wait for selected time
-            pk.connect(self._host)
             
             #turn the selected pin off and wait for change of state
-            if pk.set_output(int(pin)-1, 0):
-            
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
-            
-            #if self._inputs[self._host][int(self._pin)-1] == False:
+            if self._button.set_output(int(pin)-1, 0):
                 self._state = "released"
 
             _LOGGER.info("Custom button released.")
@@ -267,21 +239,18 @@ class ButtonEntity(RestoreEntity):
     _attr_state: None = None
     __last_pressed: datetime | None = None
 
-    def __init__(self, hass, name, host, pin, delay):
+    def __init__(self, hass, button_instance, name, host, pin, delay):
         """Initialize the button entity."""
         self._host = host
-        self._button = pokeys_instance(host)
+        self._button = button_instance
 
         self._hass = hass
         self._name = name
         self._pin = pin
         self._delay = delay
+        
         self._state = "released"
-        self._inputs_updated = self._hass.data.get("inputs_updated", None)
-        self._inputs = self._hass.data.get("inputs", None)
-        pk.connect(self._host)
-        pk.set_pin_function(int(self._pin)-1, 4)
-        pk.set_output(int(pin)-1, 0)
+        self._button.connect(self._host)
 
     @property
     def name(self):
@@ -344,48 +313,27 @@ class ButtonEntity(RestoreEntity):
         delay =self._delay
         
         if int(self._pin) > 55:
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_on(int(self._pin)-56, self._host):
-                    self._state = "pressed"
-                else:
-                    logging.error("poextbus pin is on")
-            except:
-                logging.error("poextbus_on failed")
-            
+            if self._button.poextbus_on(int(self._pin)-56):
+                self._state = "pressed"
+            else:
+                logging.error("poextbus pin is alredy on")
+        
             time.sleep(int(delay))
-            try:
-                pk.connect(self._host)
-                if pk.poextbus_off(int(self._pin)-56, self._host):
-                    self._state = "released"
-                else:
-                    logging.error("poextbus pin is off")
-            except:
-                logging.error("poextbus_off failed")
-            
+        
+            if self._button.poextbus_off(int(self._pin)-56):
+                self._state = "released"
+            else:
+                logging.error("poextbus pin is alredy off")
+        
         else:
-            pk.connect(self._host)
             #turn the selected pin on and listen for change of state
-            if pk.set_output(int(pin)-1, 1):
-            
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
-            
-            #if self._inputs[self._host][int(self._pin)-1]:
+            if self._button.set_output(int(pin)-1, 1):
                 self._state = "pressed"    
             
             time.sleep(int(delay)) #wait for selected time
-            pk.connect(self._host)
             
             #turn the selected pin off and wait for change of state
-            if pk.set_output(int(pin)-1, 0):
-            
-            #self._inputs_updated.wait(timeout=None)
-            #while self._hass.data.get("host_cycle", None) != self._host:
-            #    pass
-            
-            #if self._inputs[self._host][int(self._pin)-1] == False:
+            if self._button.set_output(int(pin)-1, 0):
                 self._state = "released"
 
             _LOGGER.info("Custom button released.")
