@@ -282,8 +282,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             logging.error("Device " + serial + " not avalible")
     
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
-    read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
-    async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
+    if len(binary_sensors)>0:
+        read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
+        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
 
     #load entity platforms
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
