@@ -80,7 +80,7 @@ ENTITY_ID_FORMAT = DOMAIN + ".{}"
 NEGATIVE_ZERO_PATTERN = re.compile(r"^-(0\.?0*)$")
 
 #how often the sensor will be read
-SCAN_INTERVAL = timedelta(seconds=8)
+SCAN_INTERVAL = timedelta(seconds=40)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
@@ -301,8 +301,9 @@ class PoKeys57E(SensorEntity):
     async def async_update(self):
         """Update the sensor value."""
         
-        self._state = self._sensor.sensor_readout(self._id)
-        return self._state
+        if self._sensor.connected:
+            self._state = self._sensor.sensor_readout(self._id)
+            return self._state
 
 
     
