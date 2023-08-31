@@ -92,9 +92,10 @@ class pokeys_interface():
             try:
                 return resp[31:41].decode('UTF-8')
             except:
-                return None
-            
-        return None
+                return False
+        else:
+            return False
+        #return None
         
     def read_inputs(self):
         if not self.connected:
@@ -117,7 +118,10 @@ class pokeys_interface():
         if not self.connected:
             return False
         resp = self.send_request(self.prepare_command(0x40, pin, 0 if state else 1, 0, 0, [], []))
-        return True
+        if resp != None:
+            return True
+        else:
+            return False
 
     def set_poled_channel(self, ch, state):
         if not self.connected:
@@ -151,7 +155,10 @@ class pokeys_interface():
     def sensor_setup(self, i):
         #self.send_request(self.prepare_command(0x60, 0, 0, 0, 0, []))
         resp = self.send_request(self.prepare_command(0x76, i, 1, 0, 0, [], []))
-        return True
+        if resp != None:
+            return True
+        else:
+            return False
 
     def read_sensor_values(self, i):
         resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [], []))
@@ -161,10 +168,14 @@ class pokeys_interface():
     def sensor_readout(self, id):
         i = int(id)
         packet = self.read_sensor_values(i)
-        valPacket = re.findall('..', binascii.hexlify(packet).decode())
-        val_hex = str(valPacket[9])+str(valPacket[8])
-        val = int(val_hex, base=16)/100
-        return val
+        if packet != None:
+            valPacket = re.findall('..', binascii.hexlify(packet).decode())
+            val_hex = str(valPacket[9])+str(valPacket[8])
+            val = int(val_hex, base=16)/100
+            return val
+        else:
+            logging.error("failed to read sensor id: "+str(id))
+            return False
 
     def read_poextbus(self):
         resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
