@@ -27,6 +27,7 @@ from typing import TypedDict
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
 import psutil
+from homeassistant.helpers import entity_registry
 
 #keywords in config
 DOMAIN = "pokeys"
@@ -75,7 +76,7 @@ def send_notification(hass: HomeAssistant, message):
     create(hass, message, "Found PoKeys device")     
 
 #this function reads inputs of every pokeys device inside configuration and wirites those inputs to homeassistant
-def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts, inputs_hosts_dict):
+def read_inputs_update_cycle(hass: HomeAssistant, hosts, inputs_hosts, inputs_hosts_dict):
     for host in hosts:
         
         instance = hass.data.get("instance"+str(host), None)
@@ -90,7 +91,15 @@ def read_inputs_update_cycle(hass: HomeAssistant, inputs, hosts, inputs_hosts, i
             hass.data["host_cycle"] = host
         
         else:
-            logging.error("configured pokeys device not found")
+            logging.error("Configured PoKeys device "+str(host)+" is dead plese remove it from configuration.yaml")
+
+def ping_cycle(hass: HomeAssistant, hosts):
+    for host in hosts:
+        instance = hass.data.get("instance"+str(host), None)
+        if instance.get_name() != False:
+            pass
+        else:
+            logging.error("Configured PoKeys device "+str(host)+" is dead plese remove it from configuration.yaml")
 
 def new_device_notify():
         device_list = []
@@ -190,7 +199,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     inputs_hosts = []
     inputs_hosts_dict = {}
     serial_list = []
-    device_sockets = {}
+    binary_sensor_hosts = []
 
     buttons = []
     switches = []
@@ -214,7 +223,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             hass.data["instance"+str(host)] = pokeys_interface(host)
             current_instance = hass.data.get("instance"+str(host), None)
-
+            #logging.error(current_instance)
             devices.append(host)
             devices_serial.append(int(serial))
             host_inputs = []
@@ -253,6 +262,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
                     entity_binary_sensor = [name_binary_sensor, host, pin_binary_sensor]
                     binary_sensors.append(entity_binary_sensor)
+                    binary_sensor_hosts.append(host)
 
             except:
                 pass
@@ -283,8 +293,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
     if len(binary_sensors)>0:
-        read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, inputs=inputs, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
+        read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict)
         async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
+    else:
+        ping_cycle_callback = lambda now: ping_cycle(hass, hosts=devices)
+        async_track_time_interval(hass, ping_cycle_callback, timedelta(seconds=2))
 
     #load entity platforms
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
