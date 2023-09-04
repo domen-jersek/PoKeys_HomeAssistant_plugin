@@ -91,6 +91,8 @@ def read_inputs_update_cycle(hass: HomeAssistant, hosts, inputs_hosts, inputs_ho
             inputs_hosts_dict[host] = inputs_hosts[ind]
             hass.data["inputs"] = inputs_hosts_dict
             hass.data["host_cycle"] = host
+            if hass.data.get("target_host", None) == host:
+                hass.data["target_host"] = None
         
         else:
             #notify homeassistant if a device goes offline
@@ -108,7 +110,8 @@ def ping_cycle(hass: HomeAssistant, hosts, serial_list):
     for host in hosts:
         instance = hass.data.get("instance"+str(host), None)
         if instance.get_name() != False:
-            pass
+            if hass.data.get("target_host", None) == host:
+                hass.data["target_host"] = None
         else:
             #notify homeassistant if a device goes offline
             if hass.data.get("target_host", None) != host and hass.data.get("target_host", None) != None:
@@ -296,7 +299,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             except:
                 pass
-
+            
             #EasySensor setup
             try:
                 if (len(entity_sensor) > 0):
@@ -306,7 +309,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                             logging.error("Sensors set up failed")
             except:
                 pass
-
+            
         else:
             logging.error("Device " + serial + " not avalible")
     

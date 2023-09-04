@@ -302,8 +302,10 @@ class PoKeys57E(SensorEntity):
         """Update the sensor value."""
         
         if self._sensor.connected:
-            self._state = self._sensor.sensor_readout(self._id)
-            return self._state
+            if self._hass.data.get("target_host", None) != self._host:
+                self._state = self._sensor.sensor_readout(self._id)
+                if self._state != False:
+                    return self._state
 
 
     
@@ -414,7 +416,8 @@ class PoKeys57E(SensorEntity):
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
-        self._attr_native_value = self._sensor.sensor_readout(self._id)
+        if self._hass.data.get("target_host", None) != self._host:
+            self._attr_native_value = self._sensor.sensor_readout(self._id)
         
         return self._attr_native_value
 
@@ -443,8 +446,8 @@ class PoKeys57E(SensorEntity):
         native_unit_of_measurement = self.native_unit_of_measurement
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
-        #pk.connect(self._host)
-        value = self._sensor.sensor_readout(self._id)
+        if self._hass.data.get("target_host", None) != self._host:
+            value = self._sensor.sensor_readout(self._id)
         
         
         # For the sake of validation, we can ignore custom device classes
@@ -791,7 +794,8 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
         return sensor_options.get("suggested_display_precision")
 
     value = state.state
-    value = self._sensor.sensor_readout(self._id)
+    if self._hass.data.get("target_host", None) != self._host:
+        value = self._sensor.sensor_readout(self._id)
     
     if (precision := display_precision()) is None:
         return value

@@ -172,9 +172,10 @@ DEVICE_CLASS_WINDOW = BinarySensorDeviceClass.WINDOW.value
 async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Track states and offer events for binary sensors."""
     #define binary sensor component
-    component = hass.data[DOMAIN] = EntityComponent[BinarySensorEntity](
-        logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
-    )
+
+    # component = hass.data[DOMAIN] = EntityComponent[BinarySensorEntity](
+    #     logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
+    # )
 
     #fetch list of binary sensors to be added to hass
     binary_sensors = hass.data.get("binary_sensors", None)
@@ -220,7 +221,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
         pass
 
     _LOGGER.info(pformat(config))
-    await component.async_setup(config)
+    #await component.async_setup(config)
     return True
 
 class PoKeys57E(BinarySensorEntity):
@@ -249,21 +250,22 @@ class PoKeys57E(BinarySensorEntity):
     async def async_update(self):
         
         #set state based on the device inputs provided by the inputs update cycle
-        self._state = self._inputs[self._host][int(self._pin)-1]
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
-    """Set up a config entry."""
+        if self._hass.data.get("target_host", None) != self._host:
+            if self._binary_sensor.connected:
+                self._state = self._inputs[self._host][int(self._pin)-1]
+        
+# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
+#     """Set up a config entry."""
     
-    component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
-    return await component.async_setup_entry(entry)
+#     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
+#     return await component.async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
+# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+#     """Unload a config entry."""
 
-    component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
-    return await component.async_unload_entry(entry)
+#     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
+#     return await component.async_unload_entry(entry)
 
 
 @dataclass
@@ -313,8 +315,9 @@ class BinarySensorEntity(Entity):
         
         pin = self._pin
         #when the state of the pin is True homeassistant recives that as on, False is off
-        if self._inputs[self._host][int(pin)-1]:
-            return self._attr_is_on
+        if self._hass.data.get("target_host", None) != self._host:
+            if self._inputs[self._host][int(pin)-1]:
+                return self._attr_is_on
         return self._state
 
     @final
