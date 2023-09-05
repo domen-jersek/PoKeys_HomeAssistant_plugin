@@ -103,7 +103,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                     hass,
                     #button["entity_id"],
                     hass.data.get("instance"+str(button["serial"]), None),#get the instance of the device
-                    button["device_name"]+"_"+button["name"],
+                    button["device_name"]+" "+button["name"],
                     button["serial"],
                     button["pin"],
                     button["delay"]

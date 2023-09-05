@@ -214,7 +214,7 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                     PoKeys57E(
                         hass,
                         hass.data.get("instance"+str(binary_sensor["serial"]), None),#get the instance of the device
-                        binary_sensor["device_name"]+"_"+binary_sensor["name"],
+                        binary_sensor["device_name"]+" "+binary_sensor["name"],
                         binary_sensor["serial"],
                         binary_sensor["pin"]
                     )
