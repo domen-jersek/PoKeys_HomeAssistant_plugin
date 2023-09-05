@@ -27,9 +27,6 @@ from typing import TypedDict
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
 import psutil
-from homeassistant.helpers import entity_registry
-#from homeassistant.config_entries import ConfigEntry
-#from homeassistant.helpers import device_registry as dr
 
 #keywords in config
 DOMAIN = "pokeys"
@@ -99,6 +96,7 @@ def read_inputs_update_cycle(hass: HomeAssistant, hosts, inputs_hosts, inputs_ho
             hass.data["inputs"] = inputs_hosts_dict
             if hass.data.get("target_host", None) == host:
                 hass.data["target_host"] = None
+                hass.data["past_host"] = None
                 hass.data["device_offline"] = False
         
         else:
@@ -312,7 +310,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             except:
                 pass
-
+            
             #EasySensor setup
             try:
                 if (len(entity_sensor) > 0):
