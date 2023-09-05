@@ -26,6 +26,7 @@ from homeassistant.helpers.entity import EntityDescription
 from typing import TypedDict, Literal, final
 import time
 
+
 #configuration keywords
 CONF_SERIAL = "serial"
 CONF_DELAY = "delay"
@@ -90,16 +91,19 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     if platform_run:
         for button in buttons:
             button = {
+                #"entity_id": "button."+button[0],
                 "name": button[0],
                 "serial": button[1],
                 "pin": button[2],
                 "delay": button[3],
+                "device_name": button[4]
             }
             async_add_entities([
                 PoKeys57E(
                     hass,
+                    #button["entity_id"],
                     hass.data.get("instance"+str(button["serial"]), None),#get the instance of the device
-                    button["name"],
+                    button["device_name"]+"_"+button["name"],
                     button["serial"],
                     button["pin"],
                     button["delay"]
@@ -120,8 +124,12 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 
 class PoKeys57E(ButtonEntity):
-    def __init__(self, hass, button_instance, name, host, pin, delay):
+    def __init__(self, hass, button_instance, name, host, pin, delay):#entity_id,
         """Initialize the button entity."""
+        #self.entity_id = ENTITY_ID_FORMAT
+        #self._attr_unique_id = host+".button."+name
+        #self._attr_device_info = self.device_info#DeviceInfo
+        #self.unique_id = entity_id
         self._host = host
         self._button = button_instance
 
@@ -131,12 +139,14 @@ class PoKeys57E(ButtonEntity):
         self._delay = delay
         
         self._state = "released"
-        
 
     @property
     def name(self):
         """Return the name of the button entity."""
         return self._name
+
+    def host(self):
+        return self._host
         
     @property
     def icon(self):
@@ -196,7 +206,42 @@ class PoKeys57E(ButtonEntity):
                 self._state = "released"
 
             _LOGGER.info("Custom button released.")
-            
+
+    # @property
+    # def device_info(self) -> DeviceInfo:
+    #     """Return the device info."""
+    #     #self._attr_device_info = True
+    #     self._attr_device_info = DeviceInfo(
+    #         identifiers={
+    #             # Serial numbers are unique identifiers within a specific domain
+    #             (DOMAIN, self._attr_unique_id)
+    #         },
+    #         name="PoKeys",
+    #         manufacturer="PoLabs d.o.o.",
+    #         model="PoKeys57E",
+    #         sw_version="0.1.0",
+    #         #via_device=(DOMAIN, self._button),
+    #     )
+    #     return self._attr_device_info
+
+# class DeviceInfo(TypedDict, total=False):
+#     """Entity device information for device registry."""
+
+#     configuration_url: str | URL | None
+#     connections: set[tuple[str, str]]
+#     default_manufacturer: str
+#     default_model: str
+#     default_name: str
+#     entry_type: DeviceEntryType | None
+#     identifiers: set[tuple[str, str]]
+#     manufacturer: str | None
+#     model: str | None
+#     name: str | None
+#     suggested_area: str | None
+#     sw_version: str | None
+#     hw_version: str | None
+#     via_device: tuple[str, str]
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Set up a config entry."""
     button_component = hass.data[DOMAIN] = EntityComponent[ButtonEntity](

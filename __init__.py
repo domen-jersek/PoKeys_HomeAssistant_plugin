@@ -27,6 +27,9 @@ from typing import TypedDict
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
 import psutil
+from homeassistant.helpers import entity_registry
+#from homeassistant.config_entries import ConfigEntry
+#from homeassistant.helpers import device_registry as dr
 
 #keywords in config
 DOMAIN = "pokeys"
@@ -213,6 +216,12 @@ def device_discovery(serial_num_input):
         except ValueError:
             pass 
 
+async def remove_entity(hass, entity_id):
+    
+    entity_registry = hass.helpers.entity_registry.async_get(hass)
+    logging.error(entity_registry.async_get(entity_id))
+    logging.error(entity_registry.async_remove(entity_id))
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the your_integration component."""
     if DOMAIN not in config:
@@ -251,7 +260,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             hass.data["instance"+str(host)] = pokeys_interface(host)
             current_instance = hass.data.get("instance"+str(host), None)
-            #logging.error(current_instance)
             devices.append(host)
             devices_serial.append(int(serial))
             host_inputs = []
@@ -268,7 +276,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     pin_button = entity_config["pin"]
                     delay_button = entity_config["delay"]
                     
-                    entity_button = [name_button, host, pin_button, delay_button]
+                    entity_button = [name_button, host, pin_button, delay_button, name]
                     buttons.append(entity_button)
                     
             except:
@@ -278,7 +286,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_switch = entity_config["name"]
                     pin_switch = entity_config["pin"]
 
-                    entity_switch = [name_switch, host, pin_switch]
+                    entity_switch = [name_switch, host, pin_switch, name]
                     switches.append(entity_switch)
                     
             except:
@@ -288,7 +296,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_binary_sensor = entity_config["name"]
                     pin_binary_sensor = entity_config["pin"]
 
-                    entity_binary_sensor = [name_binary_sensor, host, pin_binary_sensor]
+                    entity_binary_sensor = [name_binary_sensor, host, pin_binary_sensor, name]
                     binary_sensors.append(entity_binary_sensor)
 
             except:
@@ -299,12 +307,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_sensor = entity_config["name"]
                     type_sensor = entity_config["id"]
                     
-                    entity_sensor = [name_sensor, host, type_sensor]
+                    entity_sensor = [name_sensor, host, type_sensor, name]
                     sensors.append(entity_sensor)
 
             except:
                 pass
-            
+
             #EasySensor setup
             try:
                 if (len(entity_sensor) > 0):
@@ -321,7 +329,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
     if len(binary_sensors)>0:
         read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict, serial_list=serial_list)
-        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))
+        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))#0.5))
     else:
         ping_cycle_callback = lambda now: ping_cycle(hass, hosts=devices, serial_list=serial_list)
         async_track_time_interval(hass, ping_cycle_callback, timedelta(seconds=2))

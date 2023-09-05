@@ -92,12 +92,13 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                     "name": switch[0],
                     "serial": switch[1],
                     "pin": switch[2],
+                    "device_name": switch[3]
                 }
                 async_add_entities([
                     PoKeys57E(
                         hass,
                         hass.data.get("instance"+str(switch["serial"]), None),#get the instance of the device
-                        switch["name"],
+                        switch["device_name"]+"_"+switch["name"],
                         switch["serial"],
                         switch["pin"]
                     )
