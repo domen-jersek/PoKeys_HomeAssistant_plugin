@@ -28,13 +28,14 @@ from homeassistant.util import dt as dt_util
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_NAME
 from homeassistant.const import CONF_PIN
+#from .websocket_api import async_setup as async_setup_ws_api
 
 _LOGGER = logging.getLogger("pokeys")
 
 DOMAIN = "pokeys"
 
 #update interval
-SCAN_INTERVAL = timedelta(seconds=3)
+SCAN_INTERVAL = timedelta(seconds=2)
 
 CONF_SERIAL = "serial"
 
@@ -173,9 +174,9 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     """Track states and offer events for binary sensors."""
     #define binary sensor component
 
-    # component = hass.data[DOMAIN] = EntityComponent[BinarySensorEntity](
-    #     logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
-    # )
+    component = hass.data[DOMAIN] = EntityComponent[BinarySensorEntity](
+        logging.getLogger("pokeys"), DOMAIN, hass, SCAN_INTERVAL
+    )
 
     #fetch list of binary sensors to be added to hass
     binary_sensors = hass.data.get("binary_sensors", None)
@@ -220,8 +221,9 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     except:
         pass
 
+    #async_setup_ws_api(hass)
     _LOGGER.info(pformat(config))
-    #await component.async_setup(config)
+    await component.async_setup(config)
     return True
 
 class PoKeys57E(BinarySensorEntity):
@@ -241,11 +243,15 @@ class PoKeys57E(BinarySensorEntity):
 
     @property
     def name(self):
-        return self._name
+        if self._hass.data.get("target_host", None) != self._host:
+            return self._name
 
     @property
     def is_on(self):
-        return self._state
+        if self._hass.data.get("target_host", None) != self._host:
+            return self._state
+        else:
+            return None
     
     async def async_update(self):
         
@@ -254,18 +260,18 @@ class PoKeys57E(BinarySensorEntity):
             if self._binary_sensor.connected:
                 self._state = self._inputs[self._host][int(self._pin)-1]
         
-# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
-#     """Set up a config entry."""
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, async_add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
+    """Set up a config entry."""
     
-#     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
-#     return await component.async_setup_entry(entry)
+    component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
+    return await component.async_setup_entry(entry)
 
 
-# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#     """Unload a config entry."""
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
 
-#     component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
-#     return await component.async_unload_entry(entry)
+    component: EntityComponent[BinarySensorEntity] = hass.data[DOMAIN]
+    return await component.async_unload_entry(entry)
 
 
 @dataclass
@@ -298,7 +304,8 @@ class BinarySensorEntity(Entity):
 
     @property
     def name(self):
-        return self._name
+        if self._hass.data.get("target_host", None) != self._host:
+            return self._name
 
     @property
     def device_class(self) -> BinarySensorDeviceClass | None:
@@ -318,7 +325,7 @@ class BinarySensorEntity(Entity):
         if self._hass.data.get("target_host", None) != self._host:
             if self._inputs[self._host][int(pin)-1]:
                 return self._attr_is_on
-        return self._state
+            return self._state
 
     @final
     @property
@@ -327,4 +334,5 @@ class BinarySensorEntity(Entity):
         #default state is off
         if (is_on := self.is_on) is None:
             return None
-        return STATE_ON if is_on else STATE_OFF
+        if self._hass.data.get("target_host", None) != self._host:
+            return STATE_ON if is_on else STATE_OFF

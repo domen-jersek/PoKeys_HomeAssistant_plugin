@@ -74,8 +74,12 @@ def send_notification(hass: HomeAssistant, message, title):
     #creates a new notification
     create(hass, message, title)
 
-def device_is_offline(hass: HomeAssistant, serial):
-    send_notification(hass, "Configured PoKeys device "+str(serial)+" has been disconnected but still exists in your configuration which could cause issues with HomeAssistant if you wont be using it plese remove it from configuration.yaml and restart HomeAssistant", "PoKeys device disconnected")
+def device_is_offline(hass: HomeAssistant, serial, host):
+    
+    if hass.data.get("device_offline", None):
+        if hass.data.get("target_host") != hass.data.get("past_host", None):
+            send_notification(hass, "Configured PoKeys device "+str(serial)+" has been disconnected but still exists in your configuration which could cause issues with HomeAssistant if you wont be using it plese restart HomeAssistant", "PoKeys device disconnected")
+    hass.data["past_host"] = host
 
 #this function reads inputs of every pokeys device inside configuration and wirites those inputs to homeassistant
 def read_inputs_update_cycle(hass: HomeAssistant, hosts, inputs_hosts, inputs_hosts_dict, serial_list):
@@ -90,9 +94,9 @@ def read_inputs_update_cycle(hass: HomeAssistant, hosts, inputs_hosts, inputs_ho
 
             inputs_hosts_dict[host] = inputs_hosts[ind]
             hass.data["inputs"] = inputs_hosts_dict
-            hass.data["host_cycle"] = host
             if hass.data.get("target_host", None) == host:
                 hass.data["target_host"] = None
+                hass.data["device_offline"] = False
         
         else:
             #notify homeassistant if a device goes offline
@@ -103,7 +107,7 @@ def read_inputs_update_cycle(hass: HomeAssistant, hosts, inputs_hosts, inputs_ho
             if hass.data.get("device_offline", None) == False:
                 hass.data["device_offline"] = True
                 logging.error("Configured PoKeys device "+str(serial_list[ind])+" is dead plese remove it from configuration.yaml")
-                device_is_offline(hass, serial_list[ind])
+                device_is_offline(hass, serial_list[ind], host)
                 hass.data["target_host"] = None
 
 def ping_cycle(hass: HomeAssistant, hosts, serial_list):
@@ -112,6 +116,7 @@ def ping_cycle(hass: HomeAssistant, hosts, serial_list):
         if instance.get_name() != False:
             if hass.data.get("target_host", None) == host:
                 hass.data["target_host"] = None
+                hass.data["device_offline"] = False
         else:
             #notify homeassistant if a device goes offline
             if hass.data.get("target_host", None) != host and hass.data.get("target_host", None) != None:
@@ -121,7 +126,7 @@ def ping_cycle(hass: HomeAssistant, hosts, serial_list):
             if hass.data.get("device_offline", None) == False:
                 hass.data["device_offline"] = True
                 logging.error("Configured PoKeys device "+str(serial_list[ind])+" is dead plese remove it from configuration.yaml")
-                device_is_offline(hass, serial_list[ind])
+                device_is_offline(hass, serial_list[ind], host)
                 hass.data["target_host"] = None
 
 def new_device_notify():
@@ -223,7 +228,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     inputs_hosts = []
     inputs_hosts_dict = {}
     serial_list = []
-    #entities_devices = []
 
     buttons = []
     switches = []
@@ -247,6 +251,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             hass.data["instance"+str(host)] = pokeys_interface(host)
             current_instance = hass.data.get("instance"+str(host), None)
+            #logging.error(current_instance)
             devices.append(host)
             devices_serial.append(int(serial))
             host_inputs = []
@@ -309,14 +314,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                             logging.error("Sensors set up failed")
             except:
                 pass
-            
+
         else:
             logging.error("Device " + serial + " not avalible")
     
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
     if len(binary_sensors)>0:
         read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict, serial_list=serial_list)
-        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=0.5))
+        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))
     else:
         ping_cycle_callback = lambda now: ping_cycle(hass, hosts=devices, serial_list=serial_list)
         async_track_time_interval(hass, ping_cycle_callback, timedelta(seconds=2))
