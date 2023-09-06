@@ -323,6 +323,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         else:
             logging.error("Device " + serial + " not avalible")
+            send_notification(hass, "Device " + serial + " is not reachable", "Failed to configure PoKeys device")
     
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
     if len(binary_sensors)>0:
