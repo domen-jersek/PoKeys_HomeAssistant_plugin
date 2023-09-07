@@ -31,15 +31,11 @@ class pokeys_interface():
         #print("Connecting to " + address)
         self.client_pk.connect((address, self.POKEYS_PORT_COM))
         self.client_pk.settimeout(1)
-        #logging.error("connecting...")
         self.connected = True
         return self.connected
 
     def disconnect(self):
-        #self.client.close()
-        #self.client_pk.shutdown()
         self.client_pk.close()
-        #return
 
     def prepare_command(self, cmdID, param1, param2, param3, param4, data, data_1):
         self.requestID = (self.requestID + 1) % 256
@@ -160,23 +156,25 @@ class pokeys_interface():
         else:
             return False
 
-    def read_sensor_values(self, i):
-        resp = self.send_request(self.prepare_command(0x77, i, 1, 0, 0, [], []))
+    def read_sensor_values(self):
+        resp = self.send_request(self.prepare_command(0x77, 0, 13, 0, 0, [], []))
         return resp
     
-    #parsed response of read_sensor_values()
-    def sensor_readout(self, id):
-        i = int(id)
-        packet = self.read_sensor_values(i)
+    #get list of sensor values
+    def sensor_readout(self):
+        vals = []
+        packet = self.read_sensor_values()
         if packet != None:
             valPacket = re.findall('..', binascii.hexlify(packet).decode())
-            val_hex = str(valPacket[9])+str(valPacket[8])
-            val = int(val_hex, base=16)/100
-            return val
+            for i in range(0, 52, 4):
+                val_hex = valPacket[9+i]+valPacket[8+i]
+                val = int(val_hex, base=16)/100
+                vals.append(val)
+            return vals
         else:
-            logging.error("failed to read sensor id: "+str(id))
-            return False
-
+            logging.error("failed to read easysensor")
+            return None
+        
     def read_poextbus(self):
         resp = self.send_request(self.prepare_command(0xDA, 2,0,0,0,[],[]))
         l = list(resp)
@@ -238,4 +236,3 @@ class pokeys_interface():
             resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
             if resp != None:
                     return True
-

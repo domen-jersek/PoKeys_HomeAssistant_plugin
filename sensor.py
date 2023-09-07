@@ -80,7 +80,7 @@ ENTITY_ID_FORMAT = DOMAIN + ".{}"
 NEGATIVE_ZERO_PATTERN = re.compile(r"^-(0\.?0*)$")
 
 #how often the sensor will be read
-SCAN_INTERVAL = timedelta(seconds=40)
+SCAN_INTERVAL = timedelta(seconds=6)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
@@ -214,6 +214,7 @@ class PoKeys57E(SensorEntity):
         self._host = host
         self._sensor = sensor_instance
         self._hass = hass
+        self._values = self._hass.data.get("sensor_data", None)
         
         self._name = name
         self._id = id
@@ -304,9 +305,12 @@ class PoKeys57E(SensorEntity):
         
         if self._sensor.connected:
             if self._hass.data.get("target_host", None) != self._host:
-                self._state = self._sensor.sensor_readout(self._id)
-                if self._state != False:
-                    return self._state
+                try:
+                    self._state = self._values[self._host][int(self._id)]
+                    if self._state != False:
+                        return self._state
+                except:
+                    pass
 
 
     
@@ -418,8 +422,11 @@ class PoKeys57E(SensorEntity):
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         if self._hass.data.get("target_host", None) != self._host:
-            self._attr_native_value = self._sensor.sensor_readout(self._id)
-        
+            try:
+                self._attr_native_value = self._values[self._host][int(self._id)]
+            except:
+                pass
+
         return self._attr_native_value
 
     @property
@@ -448,8 +455,10 @@ class PoKeys57E(SensorEntity):
         unit_of_measurement = self.unit_of_measurement
         value = self.native_value
         if self._hass.data.get("target_host", None) != self._host:
-            value = self._sensor.sensor_readout(self._id)
-        
+            try:
+                value = self._values[self._host][int(self._id)]
+            except:
+                pass
         
         # For the sake of validation, we can ignore custom device classes
         # (customization and legacy style translations)
@@ -796,8 +805,11 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
 
     value = state.state
     if self._hass.data.get("target_host", None) != self._host:
-        value = self._sensor.sensor_readout(self._id)
-    
+        try:
+            value = self._values[self._host][int(self._id)]
+        except:
+            pass
+
     if (precision := display_precision()) is None:
         return value
 
@@ -809,5 +821,3 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
         value = NEGATIVE_ZERO_PATTERN.sub(r"\1", value)
 
     return value
-
-

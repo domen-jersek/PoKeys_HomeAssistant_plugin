@@ -53,6 +53,7 @@ DEVICE_SCHEMA = vol.Schema(
         vol.Optional("switches"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
         vol.Optional("sensors"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
         vol.Optional("binary_sensors"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
+        vol.Optional("poextbus"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
     }
 )
 
@@ -130,6 +131,14 @@ def ping_cycle(hass: HomeAssistant, hosts, serial_list):
                 device_is_offline(hass, serial_list[ind], host)
                 hass.data["target_host"] = None
 
+def sensor_data(hass: HomeAssistant, hosts, sensors_hosts_dict):
+    for host in hosts:
+        instance = hass.data.get("instance"+str(host), None)
+        values = instance.sensor_readout()
+        if values != None:
+            sensors_hosts_dict["{0}".format(host)] = values
+            hass.data["sensor_data"] = sensors_hosts_dict #share the dict of sensor values
+            
 def new_device_notify():
         device_list = []
         broadcast_address = '<broadcast>'
@@ -234,7 +243,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     inputs_hosts = []
     inputs_hosts_dict = {}
+    sensors_hosts_dict = {}
     serial_list = []
+    hosts_w_sensors = []
 
     buttons = []
     switches = []
@@ -257,7 +268,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             #entity listing that will be passed to entity files for initialization
             
             hass.data["instance"+str(host)] = pokeys_interface(host)
-            current_instance = hass.data.get("instance"+str(host), None)
+            current_instance = hass.data.get("instance"+str(host), None) #get the current communication object
             devices.append(host)
             devices_serial.append(int(serial))
             host_inputs = []
@@ -266,6 +277,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             serial_list.append(serial)
 
             host_inputs_2 = []
+            #create a dict for inputs of devices
             inputs_hosts_dict["{0}".format(host)] = host_inputs_2
 
             try:
@@ -283,6 +295,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 for entity_config in device_config["switches"]:
                     name_switch = entity_config["name"]
                     pin_switch = entity_config["pin"]
+
+                    entity_switch = [name_switch, host, pin_switch, name]
+                    switches.append(entity_switch)
+                    
+            except:
+                pass
+            try:
+                for entity_config in device_config["poextbus"]:
+                    name_switch = entity_config["name"]
+                    pin_switch = 55 + int(entity_config["pin"])
 
                     entity_switch = [name_switch, host, pin_switch, name]
                     switches.append(entity_switch)
@@ -310,12 +332,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             except:
                 pass
-            
+
             #EasySensor setup
             try:
                 if (len(entity_sensor) > 0):
                         if current_instance.sensor_setup(0):
                             _LOGGER.info("EasySensors set up")
+                            hosts_w_sensors.append(host)
                         else:
                             logging.error("Sensors set up failed")
             except:
@@ -325,14 +348,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             logging.error("Device " + serial + " not avalible")
             send_notification(hass, "Device " + serial + " is not reachable", "Failed to configure PoKeys device")
     
-    #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
+    #create an event loop inside  homeassistant that runs read_inputs_update_cycle every second
     if len(binary_sensors)>0:
         read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict, serial_list=serial_list)
-        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))#0.5))
+        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))
     else:
+        #otherwise ping devices if they are still connected
         ping_cycle_callback = lambda now: ping_cycle(hass, hosts=devices, serial_list=serial_list)
         async_track_time_interval(hass, ping_cycle_callback, timedelta(seconds=2))
     
+    #if hosts include sensors add them to the sensor update cycle
+    if len(hosts_w_sensors) > 0:
+        sensor_data_callback = lambda now: sensor_data(hass, hosts_w_sensors, sensors_hosts_dict)
+        async_track_time_interval(hass, sensor_data_callback, timedelta(seconds=10))
+
     #load entity platforms
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
