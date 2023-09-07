@@ -15,29 +15,37 @@ A HomeAssistant plugin for the PoKeys57E Ethernet I/O controller that contains a
 #pokeys configuration example
 pokeys:
   devices:
-    - name: "PoKeys57E_device_1"
+    - name: "PoKeys57E device 1"
       serial: 31557 #the serial number of your pokeys device
       buttons:
         - name: "pokeys_button_1" #the name of your button entity
           pin: 13 #the pin that will be efected
           delay: 4 #describes how long(seconds) the button will be turned on after press is called
-        - name: "pokeys_button_2"
+        - name: "pokeys button 2"
           pin: 12
           delay: 2
 
       binary_sensors:
-        - name: "pokeys_binary_sensor"
+        - name: "pokeys binary sensor"
           pin: 8
 
-    - name: "PoKeys57E_device_2"
+    - name: "PoKeys57E device 2"
       serial: 31708
       sensors:
-        - name: "pokeys_easy_sensor_temperature"
+        - name: "pokeys easysensor temperature"
           id: 0 #sensor id/index
 
       switches:
-        - name: "pokeys_switch"
+        - name: "pokeys switch"
           pin: 12
+      
+      poextbus:
+        - name: "relay switch 1"
+          pin: 1
+        - name: "second PoRelay8 first relay switch"
+          pin: 9 #creates a switch entity that will control the first relay of second PoRelay8
+        - name: "relay switch 4"
+          pin: 4
 
 #supported entities: switch, button, sensor(for pokeys EasySensor), binary_sensor
 ```
