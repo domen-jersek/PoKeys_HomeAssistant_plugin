@@ -27,6 +27,9 @@ from typing import TypedDict
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers.event import async_track_time_interval
 import psutil
+from homeassistant.helpers import entity_registry
+#from homeassistant.config_entries import ConfigEntry
+#from homeassistant.helpers import device_registry as dr
 
 #keywords in config
 DOMAIN = "pokeys"
@@ -39,6 +42,7 @@ ENTITY_SCHEMA = vol.Schema(
     {
         vol.Required("name"): cv.string,
         vol.Optional("pin"): cv.string,
+        vol.Optional("poextbus"): cv.string,
         vol.Optional("id"): cv.string,
         vol.Optional("delay"): cv.string,
     }
@@ -53,7 +57,6 @@ DEVICE_SCHEMA = vol.Schema(
         vol.Optional("switches"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
         vol.Optional("sensors"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
         vol.Optional("binary_sensors"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
-        vol.Optional("poextbus"): vol.All(cv.ensure_list, [ENTITY_SCHEMA]),
     }
 )
 
@@ -137,8 +140,8 @@ def sensor_data(hass: HomeAssistant, hosts, sensors_hosts_dict):
         values = instance.sensor_readout()
         if values != None:
             sensors_hosts_dict["{0}".format(host)] = values
-            hass.data["sensor_data"] = sensors_hosts_dict #share the dict of sensor values
-            
+            hass.data["sensor_data"] = sensors_hosts_dict
+
 def new_device_notify():
         device_list = []
         broadcast_address = '<broadcast>'
@@ -246,6 +249,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     sensors_hosts_dict = {}
     serial_list = []
     hosts_w_sensors = []
+    button_ids = []
 
     buttons = []
     switches = []
@@ -268,7 +272,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             #entity listing that will be passed to entity files for initialization
             
             hass.data["instance"+str(host)] = pokeys_interface(host)
-            current_instance = hass.data.get("instance"+str(host), None) #get the current communication object
+            current_instance = hass.data.get("instance"+str(host), None)
+            #logging.error(current_instance)
             devices.append(host)
             devices_serial.append(int(serial))
             host_inputs = []
@@ -277,38 +282,63 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             serial_list.append(serial)
 
             host_inputs_2 = []
-            #create a dict for inputs of devices
             inputs_hosts_dict["{0}".format(host)] = host_inputs_2
 
             try:
                 for entity_config in device_config["buttons"]:
                     name_button = entity_config["name"]
-                    pin_button = entity_config["pin"]
+                    
+                    try:
+                        pin_button = int(entity_config["poextbus"]) + 55
+                    except:
+                        pin_button = entity_config["pin"]
+                    
                     delay_button = entity_config["delay"]
+
+                    entity_id = name.lower()+"_"+name_button.lower()
+                    entity_id = entity_id.replace(" ", "_")
                     
-                    entity_button = [name_button, host, pin_button, delay_button, name]
+                    if entity_id == hass.data.get("ID_button", None):
+                        if entity_id[-1].isalpha():
+                            entity_id = entity_id + "_1"
+                    
+                    if hass.data.get("ID_button", None) != None:
+                        if hass.data.get("ID_button", None)[-2] == "_":
+                            if hass.data.get("ID_button", None)[-1].isalpha() == False:
+                                entity_id = entity_id+ "_" + str(int(hass.data.get("ID_button", None)[-1]) + 1)
+
+                    entity_button = [name_button, host, pin_button, delay_button, entity_id]
                     buttons.append(entity_button)
-                    
+                    hass.data["ID_button"] = entity_id
             except:
                 pass
             try:
                 for entity_config in device_config["switches"]:
                     name_switch = entity_config["name"]
-                    pin_switch = entity_config["pin"]
-
-                    entity_switch = [name_switch, host, pin_switch, name]
-                    switches.append(entity_switch)
                     
-            except:
-                pass
-            try:
-                for entity_config in device_config["poextbus"]:
-                    name_switch = entity_config["name"]
-                    pin_switch = 55 + int(entity_config["pin"])
-
-                    entity_switch = [name_switch, host, pin_switch, name]
-                    switches.append(entity_switch)
+                    try:
+                        pin_switch = int(entity_config["poextbus"]) + 55
+                    except:
+                        pin_switch = entity_config["pin"]
                     
+                    entity_id = name.lower()+"_"+name_switch.lower()
+                    entity_id = entity_id.replace(" ", "_")
+                    
+                    if entity_id == hass.data.get("ID_switch", None):
+                        if entity_id[-1].isalpha():
+                            entity_id = entity_id + "_1"
+                    
+                    if hass.data.get("ID_switch", None) != None:
+                        if hass.data.get("ID_switch", None)[-1].isalpha() == False:
+                            if hass.data.get("ID_switch", None)[-2] != "_":
+                                entity_id = entity_id+ "_" + str(int(hass.data.get("ID_switch", None)[-2::]) + 1)
+                            else:
+                                entity_id = entity_id+ "_" + str(int(hass.data.get("ID_switch", None)[-1]) + 1)
+
+
+                    entity_switch = [name_switch, host, pin_switch, entity_id]
+                    switches.append(entity_switch)
+                    hass.data["ID_switch"] = entity_id
             except:
                 pass
             try:
@@ -316,9 +346,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_binary_sensor = entity_config["name"]
                     pin_binary_sensor = entity_config["pin"]
 
-                    entity_binary_sensor = [name_binary_sensor, host, pin_binary_sensor, name]
-                    binary_sensors.append(entity_binary_sensor)
+                    entity_id = name.lower()+"_"+name_binary_sensor.lower()
+                    entity_id = entity_id.replace(" ", "_")
+                    
+                    if entity_id == hass.data.get("ID_bs", None):
+                        if entity_id[-1].isalpha():
+                            entity_id = entity_id + "_1"
+                    
+                    if hass.data.get("ID_bs", None) != None:
+                        #if hass.data.get("ID_bs", None)[-2] == "_":
+                        if hass.data.get("ID_bs", None)[-1].isalpha() == False:
+                            if hass.data.get("ID_bs", None)[-2] != "_":
+                                entity_id = entity_id+ "_" + str(int(hass.data.get("ID_bs", None)[-2::]) + 1)
+                            else:
+                                entity_id = entity_id+ "_" + str(int(hass.data.get("ID_bs", None)[-1]) + 1)
 
+                    entity_binary_sensor = [name_binary_sensor, host, pin_binary_sensor, entity_id]
+                    binary_sensors.append(entity_binary_sensor)
+                    hass.data["ID_bs"] = entity_id
             except:
                 pass
             try:
@@ -326,12 +371,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     
                     name_sensor = entity_config["name"]
                     type_sensor = entity_config["id"]
-                    
-                    entity_sensor = [name_sensor, host, type_sensor, name]
-                    sensors.append(entity_sensor)
 
+                    entity_id = name.lower()+"_"+name_sensor.lower()
+                    entity_id = entity_id.replace(" ", "_")
+                    
+                    if entity_id == hass.data.get("ID_s", None):
+                        if entity_id[-1].isalpha():
+                            entity_id = entity_id + "_1"
+                    
+                    if hass.data.get("ID_s", None) != None:
+                        if hass.data.get("ID_s", None)[-1].isalpha() == False:
+                            if hass.data.get("ID_s", None)[-2] != "_":
+                                entity_id = entity_id+ "_" + str(int(hass.data.get("ID_s", None)[-2::]) + 1)
+                            else:
+                                entity_id = entity_id+ "_" + str(int(hass.data.get("ID_s", None)[-1]) + 1)
+                    
+                    entity_sensor = [name_sensor, host, type_sensor, entity_id]
+                    sensors.append(entity_sensor)
+                    hass.data["ID_s"] = entity_id
             except:
                 pass
+            
+            # entities_devices.append(buttons)
+            # entities_devices.append(switches)
+            # entities_devices.append(binary_sensors)
+            # entities_devices.append(sensors)
 
             #EasySensor setup
             try:
@@ -343,24 +407,34 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                             logging.error("Sensors set up failed")
             except:
                 pass
+            
+            # device_registry = dr.async_get(hass)
+
+            # device_registry.async_get_or_create(
+            #     config_entry_id=ConfigEntry.entry_id,
+            #     #connections={(dr.CONNECTION_NETWORK_MAC, config.mac)},
+            #     identifiers={(DOMAIN, serial)},
+            #     manufacturer="PoLabs d.o.o.",
+            #     name=name,
+            #     model="PoKeys57E",
+            #     sw_version="0.1.0",
+            # )
 
         else:
             logging.error("Device " + serial + " not avalible")
             send_notification(hass, "Device " + serial + " is not reachable", "Failed to configure PoKeys device")
     
-    #create an event loop inside  homeassistant that runs read_inputs_update_cycle every second
+    #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
     if len(binary_sensors)>0:
         read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict, serial_list=serial_list)
-        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))
+        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))#0.5))
     else:
-        #otherwise ping devices if they are still connected
         ping_cycle_callback = lambda now: ping_cycle(hass, hosts=devices, serial_list=serial_list)
         async_track_time_interval(hass, ping_cycle_callback, timedelta(seconds=2))
     
-    #if hosts include sensors add them to the sensor update cycle
     if len(hosts_w_sensors) > 0:
         sensor_data_callback = lambda now: sensor_data(hass, hosts_w_sensors, sensors_hosts_dict)
-        async_track_time_interval(hass, sensor_data_callback, timedelta(seconds=10))
+        async_track_time_interval(hass, sensor_data_callback, timedelta(seconds=5))
 
     #load entity platforms
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
@@ -368,6 +442,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
 
+    #await entity_registry.EntityRegistry.async_remove(entity_registry.EntityRegistry, "sensor.ii")
+    #await remove_entity(hass, "automation.test")
+
+    #logging.error(entities_devices)
     #discovered devices notifications at startup
     if new_device_notify() != None:
         for device in new_device_notify():

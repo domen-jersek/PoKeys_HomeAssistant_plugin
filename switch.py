@@ -92,13 +92,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                     "name": switch[0],
                     "serial": switch[1],
                     "pin": switch[2],
-                    "device_name": switch[3]
+                    "entity_id": switch[3]
                 }
                 async_add_entities([
                     PoKeys57E(
                         hass,
+                        switch["entity_id"],
                         hass.data.get("instance"+str(switch["serial"]), None),#get the instance of the device
-                        switch["device_name"]+" "+switch["name"],
+                        switch["name"],
                         switch["serial"],
                         switch["pin"]
                     )
@@ -119,9 +120,10 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 class PoKeys57E(SwitchEntity):
 
-    def __init__(self, hass, switch_instance, name, host, pin): 
+    def __init__(self, hass, entity_id, switch_instance, name, host, pin): 
         #initialization for SwitchEntity
         self._host = host
+        self.entity_id = "switch." + entity_id
         self._switch = switch_instance
 
         self._hass = hass
@@ -196,9 +198,10 @@ class SwitchEntity(ToggleEntity):
     entity_description: SwitchEntityDescription
     _attr_device_class: SwitchDeviceClass | None
 
-    def __init__(self, hass, switch_instance, name, host, pin): 
+    def __init__(self, hass, entity_id, switch_instance, name, host, pin): 
         #refrence entity initialization
         self._host = host
+        self.entity_id = "switch." + entity_id
         self._switch = switch_instance
 
         self._hass = hass

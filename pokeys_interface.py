@@ -31,11 +31,15 @@ class pokeys_interface():
         #print("Connecting to " + address)
         self.client_pk.connect((address, self.POKEYS_PORT_COM))
         self.client_pk.settimeout(1)
+        #logging.error("connecting...")
         self.connected = True
         return self.connected
 
     def disconnect(self):
+        #self.client.close()
+        #self.client_pk.shutdown()
         self.client_pk.close()
+        #return
 
     def prepare_command(self, cmdID, param1, param2, param3, param4, data, data_1):
         self.requestID = (self.requestID + 1) % 256
@@ -160,7 +164,7 @@ class pokeys_interface():
         resp = self.send_request(self.prepare_command(0x77, 0, 13, 0, 0, [], []))
         return resp
     
-    #get list of sensor values
+    #parsed response of read_sensor_values()
     def sensor_readout(self):
         vals = []
         packet = self.read_sensor_values()
@@ -183,56 +187,13 @@ class pokeys_interface():
 
     def poextbus_on(self, pin):
         outputs = 10 *[0]
-        outputs_state = self.read_poextbus()
-        for out_card in range(9,0,-1):
-            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
-                outputs[out_card] = 1 << (pin % 8)
-                out_card_n = out_card
-
-        if pin % 8 == 0:
-            outputs[pin//8] = 1
-            outputs.reverse()
-            out_card_n = outputs.index(1)
-
-        for i in range(len(outputs_state)):
-            if (outputs_state[i] | outputs[i]) != outputs_state[i]:
-                # Something new
-                outputs_state[i] |= outputs[i]
-                # send
-                resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
-                if resp != None:
-                    return True
-            else:
-                # Nothing new
-                pass
+        outputs_state = pk.read_poextbus()
+        outputs_state[9-int(pin/8)] |= (1<<(pin % 8))
+        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
 
     def poextbus_off(self, pin):
         outputs = 10 *[0]
-        outputs_state = self.read_poextbus()
-        for out_card in range(9,0,-1):
-            if pin < (((9-out_card) +1)* 8) and pin > ((9-out_card)*8):
-                outputs[out_card] = 1 << (pin % 8)
+        outputs_state = pk.read_poextbus()
+        outputs_state[9-int(pin/8)] &= ~(1<<(pin % 8))
+        resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
 
-        if pin % 8 == 0:
-            outputs[pin//8] = 1
-            outputs.reverse()
-            
-        for i in range(len(outputs_state)):
-
-            if (outputs_state[i] & outputs[i]):
-                # Something new
-                outputs_state[i] &= ~outputs[i]
-                # send
-            
-                resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
-                if resp != None:
-                    return True
-            else:
-                # Nothing new
-                pass
-        if outputs == outputs_state:
-            outputs = list(map(sub, outputs_state, outputs))
-        
-            resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs))
-            if resp != None:
-                    return True

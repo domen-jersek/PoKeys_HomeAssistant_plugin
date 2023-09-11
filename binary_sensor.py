@@ -208,13 +208,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                     "name": binary_sensor[0],
                     "serial": binary_sensor[1],
                     "pin": binary_sensor[2],
-                    "device_name": binary_sensor[3]
+                    "entity_id": binary_sensor[3]
                 }
                 async_add_entities([
                     PoKeys57E(
                         hass,
+                        binary_sensor["entity_id"],
                         hass.data.get("instance"+str(binary_sensor["serial"]), None),#get the instance of the device
-                        binary_sensor["device_name"]+" "+binary_sensor["name"],
+                        binary_sensor["name"],
                         binary_sensor["serial"],
                         binary_sensor["pin"]
                     )
@@ -228,9 +229,10 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     return True
 
 class PoKeys57E(BinarySensorEntity):
-    def __init__(self, hass, binary_sensor_instance, name, host, pin):
+    def __init__(self, hass, entity_id, binary_sensor_instance, name, host, pin):
         #initialization of BinarySensorEntity
         self._host = host
+        self.entity_id = "binary_sensor." + entity_id
         self._binary_sensor = binary_sensor_instance
         self._hass = hass
         
@@ -290,9 +292,10 @@ class BinarySensorEntity(Entity):
     _attr_is_on: bool | None = None
     _attr_state: None = None
 
-    def __init__(self, hass, binary_sensor_instance, name, host, pin):
+    def __init__(self, hass, entity_id, binary_sensor_instance, name, host, pin):
         #initialization of reference entity
         self._host = host
+        self.entity_id = "binary_sensor." + entity_id
         self._binary_sensor = binary_sensor_instance
         self._hass = hass
         

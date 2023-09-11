@@ -80,7 +80,7 @@ ENTITY_ID_FORMAT = DOMAIN + ".{}"
 NEGATIVE_ZERO_PATTERN = re.compile(r"^-(0\.?0*)$")
 
 #how often the sensor will be read
-SCAN_INTERVAL = timedelta(seconds=6)
+SCAN_INTERVAL = timedelta(seconds=4)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
@@ -141,13 +141,14 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
                     "name": sensor[0],
                     "serial": sensor[1],
                     "pin": sensor[2],
-                    "device_name": sensor[3]
+                    "entity_id": sensor[3]
                 }
                 async_add_entities([
                     PoKeys57E(
                         hass,
+                        sensor["entity_id"],
                         hass.data.get("instance"+str(sensor["serial"]), None),#get the instance of the device
-                        sensor["device_name"]+" "+sensor["name"],
+                        sensor["name"],
                         sensor["serial"],
                         sensor["pin"]
                     )
@@ -209,9 +210,10 @@ class PoKeys57E(SensorEntity):
     _sensor_option_display_precision: int | None = None
     _sensor_option_unit_of_measurement: str | None | UndefinedType = UNDEFINED
 
-    def __init__(self, hass, sensor_instance, name, host, id):
+    def __init__(self, hass, entity_id, sensor_instance, name, host, id):
         #initialization of sensor entity
         self._host = host
+        self.entity_id = "sensor." + entity_id
         self._sensor = sensor_instance
         self._hass = hass
         self._values = self._hass.data.get("sensor_data", None)
@@ -821,3 +823,5 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
         value = NEGATIVE_ZERO_PATTERN.sub(r"\1", value)
 
     return value
+
+

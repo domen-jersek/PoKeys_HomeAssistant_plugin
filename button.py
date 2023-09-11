@@ -26,7 +26,6 @@ from homeassistant.helpers.entity import EntityDescription
 from typing import TypedDict, Literal, final
 import time
 
-
 #configuration keywords
 CONF_SERIAL = "serial"
 CONF_DELAY = "delay"
@@ -91,19 +90,19 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
     if platform_run:
         for button in buttons:
             button = {
-                #"entity_id": "button."+button[0],
                 "name": button[0],
                 "serial": button[1],
                 "pin": button[2],
                 "delay": button[3],
-                "device_name": button[4]
+                "entity_id": button[4]#"device_name": button[4]
             }
+
             async_add_entities([
                 PoKeys57E(
                     hass,
-                    #button["entity_id"],
+                    button["entity_id"],
                     hass.data.get("instance"+str(button["serial"]), None),#get the instance of the device
-                    button["device_name"]+" "+button["name"],
+                    button["name"],
                     button["serial"],
                     button["pin"],
                     button["delay"]
@@ -124,16 +123,17 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 
 class PoKeys57E(ButtonEntity):
-    def __init__(self, hass, button_instance, name, host, pin, delay):#entity_id,
+    def __init__(self, hass, entity_id, button_instance, name, host, pin, delay):#entity_id,
         """Initialize the button entity."""
         #self.entity_id = ENTITY_ID_FORMAT
         #self._attr_unique_id = host+".button."+name
         #self._attr_device_info = self.device_info#DeviceInfo
-        #self.unique_id = entity_id
+        self._hass = hass
+        self.entity_id = "button."+entity_id
+        
         self._host = host
         self._button = button_instance
 
-        self._hass = hass
         self._name = name
         self._pin = pin
         self._delay = delay
