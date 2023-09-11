@@ -43,6 +43,7 @@ ENTITY_SCHEMA = vol.Schema(
         vol.Required("name"): cv.string,
         vol.Optional("pin"): cv.string,
         vol.Optional("poextbus"): cv.string,
+        vol.Optional("interval"): cv.string,
         vol.Optional("id"): cv.string,
         vol.Optional("delay"): cv.string,
     }
@@ -250,6 +251,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     serial_list = []
     hosts_w_sensors = []
     button_ids = []
+    bs_interval = 1
+    s_interval = 5
 
     buttons = []
     switches = []
@@ -289,7 +292,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_button = entity_config["name"]
                     
                     try:
-                        pin_button = int(entity_config["poextbus"]) + 55
+                        pin_button = entity_config["poextbus"]
                     except:
                         pin_button = entity_config["pin"]
                     
@@ -317,7 +320,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     name_switch = entity_config["name"]
                     
                     try:
-                        pin_switch = int(entity_config["poextbus"]) + 55
+                        pin_switch = entity_config["poextbus"]
                     except:
                         pin_switch = entity_config["pin"]
                     
@@ -345,7 +348,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 for entity_config in device_config["binary_sensors"]:
                     name_binary_sensor = entity_config["name"]
                     pin_binary_sensor = entity_config["pin"]
-
+                   
                     entity_id = name.lower()+"_"+name_binary_sensor.lower()
                     entity_id = entity_id.replace(" ", "_")
                     
@@ -354,7 +357,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                             entity_id = entity_id + "_1"
                     
                     if hass.data.get("ID_bs", None) != None:
-                        #if hass.data.get("ID_bs", None)[-2] == "_":
                         if hass.data.get("ID_bs", None)[-1].isalpha() == False:
                             if hass.data.get("ID_bs", None)[-2] != "_":
                                 entity_id = entity_id+ "_" + str(int(hass.data.get("ID_bs", None)[-2::]) + 1)
@@ -391,11 +393,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     hass.data["ID_s"] = entity_id
             except:
                 pass
-            
-            # entities_devices.append(buttons)
-            # entities_devices.append(switches)
-            # entities_devices.append(binary_sensors)
-            # entities_devices.append(sensors)
 
             #EasySensor setup
             try:
@@ -407,18 +404,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                             logging.error("Sensors set up failed")
             except:
                 pass
-            
-            # device_registry = dr.async_get(hass)
-
-            # device_registry.async_get_or_create(
-            #     config_entry_id=ConfigEntry.entry_id,
-            #     #connections={(dr.CONNECTION_NETWORK_MAC, config.mac)},
-            #     identifiers={(DOMAIN, serial)},
-            #     manufacturer="PoLabs d.o.o.",
-            #     name=name,
-            #     model="PoKeys57E",
-            #     sw_version="0.1.0",
-            # )
 
         else:
             logging.error("Device " + serial + " not avalible")
@@ -427,14 +412,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     #create an event loop inside  homeassistant that runs read_inputs_update_cycle every 0.5 seconds
     if len(binary_sensors)>0:
         read_inputs_update_cycle_callback = lambda now: read_inputs_update_cycle(hass, hosts=devices, inputs_hosts=inputs_hosts, inputs_hosts_dict=inputs_hosts_dict, serial_list=serial_list)
-        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=1))#0.5))
+        async_track_time_interval(hass, read_inputs_update_cycle_callback, timedelta(seconds=bs_interval))
     else:
         ping_cycle_callback = lambda now: ping_cycle(hass, hosts=devices, serial_list=serial_list)
         async_track_time_interval(hass, ping_cycle_callback, timedelta(seconds=2))
     
     if len(hosts_w_sensors) > 0:
         sensor_data_callback = lambda now: sensor_data(hass, hosts_w_sensors, sensors_hosts_dict)
-        async_track_time_interval(hass, sensor_data_callback, timedelta(seconds=5))
+        async_track_time_interval(hass, sensor_data_callback, timedelta(seconds=s_interval))
 
     #load entity platforms
     hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
@@ -442,10 +427,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
 
-    #await entity_registry.EntityRegistry.async_remove(entity_registry.EntityRegistry, "sensor.ii")
-    #await remove_entity(hass, "automation.test")
-
-    #logging.error(entities_devices)
     #discovered devices notifications at startup
     if new_device_notify() != None:
         for device in new_device_notify():

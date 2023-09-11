@@ -128,7 +128,12 @@ class PoKeys57E(SwitchEntity):
 
         self._hass = hass
         self._name = name  
-        self._pin = pin
+        try:
+            self._pin = int(pin)
+        except:
+            self._pin = None
+            self.dev = pin[:pin.index(".")]
+            self.out = pin[pin.index("."):].replace(".", "")
         self._state = None
         try:
             self._switch.set_pin_function(int(pin)-1, 4)
@@ -147,8 +152,8 @@ class PoKeys57E(SwitchEntity):
     
     def turn_on(self): 
         pin = self._pin
-        if int(self._pin) > 55:
-            if self._switch.poextbus_on(int(self._pin)-56):
+        if self._pin == None:
+            if self._switch.poextbus_on(int(self.dev),int(self.out)-1):
                 self._state = True
             else:
                 logging.error("poextpin is on")
@@ -163,8 +168,8 @@ class PoKeys57E(SwitchEntity):
 
     def turn_off(self):
         pin = self._pin
-        if int(self._pin) > 55:
-            if self._switch.poextbus_off(int(self._pin)-56):
+        if self._pin == None:
+            if self._switch.poextbus_off(int(self.dev),int(self.out)-1):
                 self._state = False
             else:
                 logging.error("poextbus pin is off")
@@ -206,7 +211,12 @@ class SwitchEntity(ToggleEntity):
 
         self._hass = hass
         self._name = name  
-        self._pin = pin
+        try:
+            self._pin = int(pin)
+        except:
+            self._pin = None
+            self.dev = pin[:pin.index(".")]
+            self.out = pin[pin.index("."):].replace(".", "")
         self._state = None
         try:
             self._switch.set_pin_function(int(pin)-1, 4)
@@ -225,8 +235,8 @@ class SwitchEntity(ToggleEntity):
     
     def turn_on(self): 
         pin = self._pin
-        if int(self._pin) > 55:
-            if self._switch.poextbus_on(int(self._pin)-56):
+        if self._pin == None:
+            if self._switch.poextbus_on(int(self.dev),int(self.out)-1):
                 self._state = True
             else:
                 logging.error("poextpin is on")
@@ -240,8 +250,8 @@ class SwitchEntity(ToggleEntity):
 
     def turn_off(self):
         pin = self._pin
-        if int(self._pin) > 55:
-            if self._switch.poextbus_off(int(self._pin)-56):
+        if self._pin == None:
+            if self._switch.poextbus_off(int(self.dev),int(self.out)-1):
                 self._state = False
             else:
                 logging.error("poextbus pin is off")

@@ -185,15 +185,19 @@ class pokeys_interface():
         
         return l[8:18]
 
-    def poextbus_on(self, pin):
+    def poextbus_on(self, dev, pin):
         outputs = 10 *[0]
-        outputs_state = pk.read_poextbus()
-        outputs_state[9-int(pin/8)] |= (1<<(pin % 8))
+        outputs_state = self.read_poextbus()
+        outputs_state[-dev] |= (1<<(pin % 8))
         resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
+        if resp != None:
+            return True
 
-    def poextbus_off(self, pin):
+    def poextbus_off(self, dev, pin):
         outputs = 10 *[0]
-        outputs_state = pk.read_poextbus()
-        outputs_state[9-int(pin/8)] &= ~(1<<(pin % 8))
+        outputs_state = self.read_poextbus()
+        outputs_state[-dev] &= ~(1<<(pin % 8))
         resp = self.send_request(self.prepare_command(0xDA, 1,0,0,0,[],outputs_state))
+        if resp != None:
+            return True
 

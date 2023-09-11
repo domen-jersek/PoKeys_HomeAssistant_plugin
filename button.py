@@ -123,11 +123,8 @@ async def async_setup_platform(hass: HomeAssistant, config: ConfigType, async_ad
 
 
 class PoKeys57E(ButtonEntity):
-    def __init__(self, hass, entity_id, button_instance, name, host, pin, delay):#entity_id,
+    def __init__(self, hass, entity_id, button_instance, name, host, pin, delay):
         """Initialize the button entity."""
-        #self.entity_id = ENTITY_ID_FORMAT
-        #self._attr_unique_id = host+".button."+name
-        #self._attr_device_info = self.device_info#DeviceInfo
         self._hass = hass
         self.entity_id = "button."+entity_id
         
@@ -135,9 +132,14 @@ class PoKeys57E(ButtonEntity):
         self._button = button_instance
 
         self._name = name
-        self._pin = pin
         self._delay = delay
-        
+        try:
+            self._pin = int(pin)
+        except:
+            self._pin = None
+            self.dev = pin[:pin.index(".")]
+            self.out = pin[pin.index("."):].replace(".", "")
+            
         self._state = "released"
 
     @property
@@ -181,15 +183,15 @@ class PoKeys57E(ButtonEntity):
         pin = self._pin
         delay =self._delay
         
-        if int(self._pin) > 55:
-            if self._button.poextbus_on(int(self._pin)-56):
+        if self._pin == None:
+            if self._button.poextbus_on(int(self.dev), int(self.out)-1):
                 self._state = "pressed"
             else:
                 logging.error("poextbus pin is alredy on")
         
             time.sleep(int(delay))
         
-            if self._button.poextbus_off(int(self._pin)-56):
+            if self._button.poextbus_off(int(self.dev), int(self.out)-1):
                 self._state = "released"
             else:
                 logging.error("poextbus pin is alredy off")
@@ -206,41 +208,6 @@ class PoKeys57E(ButtonEntity):
                 self._state = "released"
 
             _LOGGER.info("Custom button released.")
-
-    # @property
-    # def device_info(self) -> DeviceInfo:
-    #     """Return the device info."""
-    #     #self._attr_device_info = True
-    #     self._attr_device_info = DeviceInfo(
-    #         identifiers={
-    #             # Serial numbers are unique identifiers within a specific domain
-    #             (DOMAIN, self._attr_unique_id)
-    #         },
-    #         name="PoKeys",
-    #         manufacturer="PoLabs d.o.o.",
-    #         model="PoKeys57E",
-    #         sw_version="0.1.0",
-    #         #via_device=(DOMAIN, self._button),
-    #     )
-    #     return self._attr_device_info
-
-# class DeviceInfo(TypedDict, total=False):
-#     """Entity device information for device registry."""
-
-#     configuration_url: str | URL | None
-#     connections: set[tuple[str, str]]
-#     default_manufacturer: str
-#     default_model: str
-#     default_name: str
-#     entry_type: DeviceEntryType | None
-#     identifiers: set[tuple[str, str]]
-#     manufacturer: str | None
-#     model: str | None
-#     name: str | None
-#     suggested_area: str | None
-#     sw_version: str | None
-#     hw_version: str | None
-#     via_device: tuple[str, str]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, config: ConfigType, add_entities: AddEntitiesCallBack, discovery_info=None) -> bool:
     """Set up a config entry."""
@@ -288,7 +255,13 @@ class ButtonEntity(RestoreEntity):
 
         self._hass = hass
         self._name = name
-        self._pin = pin
+        try:
+            self._pin = int(pin)
+        except:
+            self._pin = None
+            self.dev = pin[:pin.index(".")]
+            self.out = pin[pin.index("."):].replace(".", "")
+        
         self._delay = delay
         
         self._state = "released"
@@ -353,15 +326,15 @@ class ButtonEntity(RestoreEntity):
         pin = self._pin
         delay =self._delay
         
-        if int(self._pin) > 55:
-            if self._button.poextbus_on(int(self._pin)-56):
+        if self._pin == None:
+            if self._button.poextbus_on(int(self.dev), int(self.out)-1):
                 self._state = "pressed"
             else:
                 logging.error("poextbus pin is alredy on")
         
             time.sleep(int(delay))
         
-            if self._button.poextbus_off(int(self._pin)-56):
+            if self._button.poextbus_off(int(self.dev), int(self.out)-1):
                 self._state = "released"
             else:
                 logging.error("poextbus pin is alredy off")
