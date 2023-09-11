@@ -39,7 +39,7 @@ pokeys:
         - name: "pokeys switch"
           pin: 12
         - name: "PoRelay"
-          poextbus: 2 #creates a switch on the second relay of poextbus
+          poextbus: 2.3 #the first digit is the device id the second digit is the relay on that device(device2 relay3)
 
 #supported entities: switch, button, sensor(for pokeys EasySensor), binary_sensor
 ```
