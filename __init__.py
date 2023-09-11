@@ -65,7 +65,9 @@ DEVICE_SCHEMA = vol.Schema(
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema(
-            {#pokeys has one option(devices)
+            {
+                vol.Optional("binary_sensors_interval"): cv.string,
+                vol.Optional("sensors_interval"): cv.string,
                 vol.Optional("devices"): vol.All(cv.ensure_list, [DEVICE_SCHEMA]),
             }
         )
@@ -251,8 +253,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     serial_list = []
     hosts_w_sensors = []
     button_ids = []
-    bs_interval = 1
-    s_interval = 5
+    try:
+        if int(entry["binary_sensors_interval"]) > 1:
+            bs_interval = int(entry["binary_sensors_interval"])
+    except:
+        bs_interval = 1
+        
+    try:
+        if int(entry["binary_sensors_interval"]) > 1:
+            s_interval = int(entry["sensors_interval"])
+    except:
+        s_interval = 5
 
     buttons = []
     switches = []
@@ -276,7 +287,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             hass.data["instance"+str(host)] = pokeys_interface(host)
             current_instance = hass.data.get("instance"+str(host), None)
-            #logging.error(current_instance)
             devices.append(host)
             devices_serial.append(int(serial))
             host_inputs = []
@@ -348,7 +358,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 for entity_config in device_config["binary_sensors"]:
                     name_binary_sensor = entity_config["name"]
                     pin_binary_sensor = entity_config["pin"]
-                   
+
                     entity_id = name.lower()+"_"+name_binary_sensor.lower()
                     entity_id = entity_id.replace(" ", "_")
                     
