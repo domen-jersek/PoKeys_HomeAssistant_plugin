@@ -38,14 +38,8 @@ pokeys:
       switches:
         - name: "pokeys switch"
           pin: 12
-      
-      poextbus:
-        - name: "relay switch 1"
-          pin: 1
-        - name: "second PoRelay8 first relay switch"
-          pin: 9 #creates a switch entity that will control the first relay of second PoRelay8
-        - name: "relay switch 4"
-          pin: 4
+        - name: "PoRelay"
+          poextbus: 2 #creates a switch on the second relay of poextbus
 
 #supported entities: switch, button, sensor(for pokeys EasySensor), binary_sensor
 ```
