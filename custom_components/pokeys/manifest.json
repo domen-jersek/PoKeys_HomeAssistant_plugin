@@ -1,0 +1,11 @@
+{
+    "domain": "pokeys",
+    "name": "pokeys",
+    "documentation": "https://blog.poscope.com",
+    "issue_tracker": "https://github.com/domen-jersek/PoKeys_HomeAssistant_plugin/issues",
+    "codeowners": "https://github.com/domen-jersek, https://www.poscope.com",
+    "requierments": ["socket", "netifaces==0.11.0"],
+    "iot_state": "assumed_state",
+    "description": "HomeAssistant integration for pokeys57e boards",
+    "version": "0.1.0"
+}
