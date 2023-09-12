@@ -14,8 +14,8 @@ A HomeAssistant plugin for the PoKeys57E Ethernet I/O controller that contains a
 ```
 #pokeys configuration example
 pokeys:
-  sensors_interval: 6 #[optional]how often sensors will update(in seconds)
-  binary_sensors_interval: 2 #[optional]how often binary_sensors will update(in seconds)
+  sensors_interval: 6 #[optional]how often sensors will update(in seconds)(default is 5)
+  binary_sensors_interval: 2 #[optional]how often binary_sensors will update(in seconds)(default is 1)
   devices:
     - name: "PoKeys57E device 1"
       serial: 31557 #the serial number of your pokeys device
