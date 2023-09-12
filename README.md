@@ -4,9 +4,7 @@ A HomeAssistant plugin for the PoKeys57E Ethernet I/O controller that contains a
 
 # Setup
 
-- Go to your HomeAssistant config folder and create a folder called custom_components
-- In the custom_components folder create a folder called pokeys
-- Simply copy the repo into your pokeys folder
+- Copy the custom_components folder into your HA config folder
 - Restart HomeAssistant
 - After restart you can now add your pokeys device to the file configuration.yaml
 - An example of the pokeys configuration inside configuration.yaml:
