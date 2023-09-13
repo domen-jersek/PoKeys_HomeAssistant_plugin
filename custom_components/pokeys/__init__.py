@@ -432,7 +432,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         async_track_time_interval(hass, sensor_data_callback, timedelta(seconds=s_interval))
 
     #load entity platforms
-    hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
+    #hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
     hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
