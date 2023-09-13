@@ -1,8 +1,0 @@
-{
-    "domain": "pokeys",
-    "name": "pokeys",
-    "requierments": ["socket", "netifaces==0.11.0"],
-    "iot_state": "assumed_state",
-    "description": "HomeAssistant integration for pokeys57e boards",
-    "version": "0.1.0"
-}
