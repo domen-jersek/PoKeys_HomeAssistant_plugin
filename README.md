@@ -1,6 +1,6 @@
 # PoKeys_HomeAssistant_plugin
 
-A HomeAssistant plugin for the PoKeys57E Ethernet I/O controller that contains all of the basic features required for most home automation projects. For detailed setup and use descriprion check out our blog site at https://blog.poscope.com
+A HomeAssistant integration for the PoKeys57E Ethernet I/O controller that in combination with other PoLabs d.o.o. products contains all of the basic features required for most home automation projects. For detailed setup and use description check out our blog site at https://blog.poscope.com
 
 # Setup
 ## Hacs setup
