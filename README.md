@@ -12,10 +12,9 @@ A HomeAssistant integration for the PoKeys57E Ethernet I/O controller that in co
 - Copy the custom_components folder into your HA config folder
 - Restart HomeAssistant
 - After restart you can now add your pokeys device to the file configuration.yaml
-- An example of the pokeys configuration inside configuration.yaml:
+### An example of the pokeys configuration inside configuration.yaml
 
 ```
-#pokeys configuration example
 pokeys:
   sensors_interval: 6 #[optional]how often sensors will update(seconds)(default is 5)
   binary_sensors_interval: 2 #[optional]how often binary_sensors will update(seconds)(default is 1)
