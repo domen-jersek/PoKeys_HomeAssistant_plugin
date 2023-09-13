@@ -1,9 +1,14 @@
 # PoKeys_HomeAssistant_plugin
 
-A HomeAssistant plugin for the PoKeys57E Ethernet I/O controller that contains all of the basic features required for most home automation projects.
+A HomeAssistant plugin for the PoKeys57E Ethernet I/O controller that contains all of the basic features required for most home automation projects. For detailed setup and use descriprion check out our blog site at https://blog.poscope.com
 
 # Setup
-
+## Hacs setup
+- Go to Hacs>Integrations>Custom repositories
+- Paste the link ```https://github.com/domen-jersek/PoKeys_HomeAssistant_plugin``` and select ```Integration```
+- Restart HomeAssistant
+- Go to Hacs>Integrations>Explore & download repositories, search for "pokeys" and click Download
+## Manual setup
 - Copy the custom_components folder into your HA config folder
 - Restart HomeAssistant
 - After restart you can now add your pokeys device to the file configuration.yaml
@@ -41,8 +46,7 @@ pokeys:
         - name: "PoRelay"
           poextbus: 2.3 #the first digit is the device id the second digit is the relay on that device(device2 relay3)
 
-#supported entities: switch, button, sensor(for pokeys EasySensor), binary_sensor
+#supported entities: switch, sensor(for pokeys EasySensor), binary_sensor
 ```
 
 - After adding the pokeys configuration for your home automation project restart HomeAssistant and the entities you inputed will be added to HomeAssistant
-- When setting up output entities note that the pins 56-136 are reserved for PoExtBus in a counting fashion
