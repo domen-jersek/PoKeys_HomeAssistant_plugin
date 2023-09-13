@@ -17,18 +17,14 @@ A HomeAssistant integration for the PoKeys57E Ethernet I/O controller that in co
 ```
 #pokeys configuration example
 pokeys:
-  sensors_interval: 6 #[optional]how often sensors will update(in seconds)(default is 5)
-  binary_sensors_interval: 2 #[optional]how often binary_sensors will update(in seconds)(default is 1)
+  sensors_interval: 6 #[optional]how often sensors will update(seconds)(default is 5)
+  binary_sensors_interval: 2 #[optional]how often binary_sensors will update(seconds)(default is 1)
   devices:
     - name: "PoKeys57E device 1"
       serial: 31557 #the serial number of your pokeys device
-      buttons:
-        - name: "pokeys_button_1" #the name of your button entity
-          pin: 13 #the pin that will be efected
-          delay: 4 #describes how long(seconds) the button will be turned on after press is called
-        - name: "pokeys button 2"
-          pin: 12
-          delay: 2
+      sensors:
+        - name: "pokeys easysensor temperature"
+          id: 0 #sensor id/index     
 
       binary_sensors:
         - name: "pokeys binary sensor"
@@ -36,10 +32,6 @@ pokeys:
 
     - name: "PoKeys57E device 2"
       serial: 31708
-      sensors:
-        - name: "pokeys easysensor temperature"
-          id: 0 #sensor id/index
-
       switches:
         - name: "pokeys switch"
           pin: 12
