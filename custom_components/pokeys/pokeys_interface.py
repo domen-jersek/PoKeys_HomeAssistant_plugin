@@ -169,10 +169,8 @@ class pokeys_interface():
         vals = []
         packet = self.read_sensor_values()
         if packet != None:
-            valPacket = re.findall('..', binascii.hexlify(packet).decode())
             for i in range(0, 52, 4):
-                val_hex = valPacket[9+i]+valPacket[8+i]
-                val = int(val_hex, base=16)/100
+                val = int.from_bytes(packet[i+8:i+12], byteorder='little', signed = True) / 100
                 vals.append(val)
             return vals
         else:
