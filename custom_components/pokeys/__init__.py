@@ -31,6 +31,9 @@ from homeassistant.helpers import entity_registry
 #from homeassistant.config_entries import ConfigEntry
 #from homeassistant.helpers import device_registry as dr
 
+from homeassistant.helpers.entity_registry import async_get
+from homeassistant.helpers.discovery import load_platform
+
 #keywords in config
 DOMAIN = "pokeys"
 CONF_SERIAL = "serial"
@@ -231,7 +234,7 @@ def device_discovery(serial_num_input):
 
 async def remove_entity(hass, entity_id):
     
-    entity_registry = hass.helpers.entity_registry.async_get(hass)
+    entity_registry = async_get(hass) #hass.helpers.entity_registry.async_get(hass)
     logging.error(entity_registry.async_get(entity_id))
     logging.error(entity_registry.async_remove(entity_id))
 
@@ -433,9 +436,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     #load entity platforms
     #hass.helpers.discovery.load_platform("button", DOMAIN, {}, config)
-    hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
-    hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
-    hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
+    load_platform(hass, "switch", DOMAIN, {}, config) #hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
+    load_platform(hass, "sensor", DOMAIN, {}, config) #hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
+    load_platform(hass, "binary_sensor", DOMAIN, {}, config) #hass.helpers.discovery.load_platform("binary_sensor",
 
     #discovered devices notifications at startup
     if new_device_notify() != None:
