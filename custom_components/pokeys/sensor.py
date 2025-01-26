@@ -21,8 +21,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (  # noqa: F401
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_UNIT_OF_MEASUREMENT,
-    DEVICE_CLASS_HUMIDITY,
-    DEVICE_CLASS_ILLUMINANCE,
+    #DEVICE_CLASS_HUMIDITY,
+    #DEVICE_CLASS_ILLUMINANCE,
 )
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.core import HomeAssistant, State, callback
